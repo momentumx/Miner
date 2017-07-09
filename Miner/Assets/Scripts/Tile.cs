@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class Tile : MonoBehaviour {
 
-	public byte value, state, hp, gemType;
+	public byte value, state, gemType;
+	public sbyte hp;
 
 	[SerializeField]
 	Color jewelColor;
