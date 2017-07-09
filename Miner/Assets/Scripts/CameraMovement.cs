@@ -10,12 +10,11 @@ public class CameraMovement : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		transform.position += ( Vector3 )(( ( Vector2 )target.position - ( Vector2 )transform.position ) * .02f);
-		float leftSide = Screen.height*.005f;
+		transform.position += ( Vector3 )(( ( Vector2 )target.position - ( Vector2 )transform.position ) * .03f);
 		if ( transform.position.x > Screen.width )
 			transform.position = new Vector2 ( Screen.width * .5f, transform.position.y );
-		else if ( transform.position.x < leftSide )
-			transform.position = new Vector2 ( leftSide, transform.position.y );
+		else if ( transform.position.x < 1f )
+			transform.position = new Vector2 ( 1f, transform.position.y );
 	}
 
 	void Update () {
