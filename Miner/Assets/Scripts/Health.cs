@@ -115,7 +115,7 @@ public class Health : MonoBehaviour {
 							ind.GetComponent<UnityEngine.UI.Text> ().color = _color;
 							if ( _dmg > 0 ) {
 								ind.transform.GetChild ( 0 ).gameObject.SetActive ( true );
-								MasterControllerScript.sfxPlayer.PlayOneShot ( MasterControllerScript.armor );
+								//MCScript.sfxPlayer.PlayOneShot ( MCScript.armor );
 							}
 							healthbar.localScale = scale;
 							break;
@@ -127,7 +127,7 @@ public class Health : MonoBehaviour {
 							ind.GetComponent<UnityEngine.UI.Text> ().color = _color;
 							if ( _dmg > 0 ) {
 								ind.transform.GetChild ( 0 ).gameObject.SetActive ( true );
-								MasterControllerScript.sfxPlayer.PlayOneShot ( MasterControllerScript.armor );
+								//MCScript.sfxPlayer.PlayOneShot ( MCScript.armor );
 							}
 							break;
 						default:

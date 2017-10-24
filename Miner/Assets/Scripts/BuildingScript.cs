@@ -2,17 +2,28 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BuildingScript : MonoBehaviour {
-
+public class BuildingScript : MonoBehaviour
+{
+	[HideInInspector]
+	public float efficiency = 100f, collection;
+	[HideInInspector]
 	public byte type;
-	public float efficiency;
-	// Use this for initialization
-	void Start () {
-		
+
+	private void FixedUpdate()
+	{
+		if (efficiency > .5f)
+		{
+			efficiency -= .000001f;
+		}
+		collection += .0001f;
 	}
-	
-	// Update is called once per frame
-	void Update () {
-		
+
+	private void OnTriggerEnter2D(Collider2D collision)
+	{
+
+		if (CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.Above || CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.AboveSlide)
+		{
+			Instantiate(Resources.Load<GameObject>("buildingMainMenu" + type), transform, false);
+		}
 	}
 }

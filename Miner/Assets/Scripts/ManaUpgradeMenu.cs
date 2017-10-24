@@ -18,7 +18,7 @@ public class ManaUpgradeMenu : MonoBehaviour
         //if ( PlayerPrefs.GetInt ( _val.saveKey.ToString () ) < 5 && Player.mana >= _val.cost ) {
 		//	Player.mana -= _val.cost;
         //    //manaText.text = (Player.mana / Player.maxMana * 100).ToString("F0") + "% (" + Player.mana.ToString ( "F0" ) + ')';
-        //    _val.slider.value = MasterControllerScript.SaveKeyInc(_val.saveKey);
+        //    _val.slider.value = MCScript.SaveKeyInc(_val.saveKey);
         //}
 	}
 }

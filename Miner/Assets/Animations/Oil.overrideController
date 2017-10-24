@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: Oil
+  m_Controller: {fileID: 9100000, guid: ad96b7b2a81da1b4a8f64f98a336c221, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: 50bd3fc270313dd499a8447f1001826e, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 47b4f15fab66d194dadc03f9230a2ef0, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 472dc12a187319944b224375e6073ab0, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 18da9afd04d7ec147b200a2906283d2b, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: f8e59cc79c048fd4fa0867517502688c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 8e8e7d83d9960054e961fed50ab7b076, type: 2}
