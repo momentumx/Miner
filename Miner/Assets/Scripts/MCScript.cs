@@ -10,63 +10,59 @@ using UnityEngine.SceneManagement;
 
 public class MCScript : MonoBehaviour
 {
-	const string saveName = "/DontTouch.dat";
-	const string saveName2 = "/DontTouch2.dat";
-	public const uint differentItemCount = 6;
-	public enum SAVEKEY
-	{
-		MusicVolume, SfxVolume, Speed, Level,
-		Total
-	}
-	public enum MUSIC_CLIP { None = -1, DayTime, NightTime, Start, Boss, Victory }
+	const string saveStageFile = "/DontTouch.dat";
+	const string saveAboveFile = "/DontTouch2.dat";
+	const string saveBothFile = "/DontTouch3.dat";
+	const string saveBelowFile = "/DontTouch4.dat";
+	public const uint differentItemCount = 5;
 
 	public enum TILE_VALUES
 	{
-		Dirt, Stone, Oil, Artifact, Map, Treasure, Coal, Copper, Nickel, Zinc, Iron, Tin, Aluminum, Opal, Silver, Gold, Ruby, Emerald
-			, Azurite, Amythyst, Onyx, Pearl, Chromium, Sapphire, Topaz, Titanium, Platinum, Kryptonium, Plutonium, Marsinium,
+		Dirt, Stone, Oil, Artifact, Map, Treasure, Coal, Copper, Nickel, Opal, Zinc, Iron, Tin, Aluminum, Amethyst, Silver, Gold, Ruby, Emerald
+			, Azurite, Onyx, Pearl, Chromium, Sapphire, Topaz, Titanium, Diamond, Platinum, Kryptonium, Plutonium, Marsinium,
 
 		Total
 	}
 	public enum COLLECTIBLES
 	{
-		graphite,
+		// minerals
+		Coal, Copper, Nickel, Opal, Zinc, Iron, Tin, Aluminum, Amethyst, Silver, Gold, Ruby, Emerald, Azurite, Onyx, Pearl, Chromium, Sapphire
+			, Topaz, Titanium, Diamond, Platinum, Kryptonium, Plutonium, Marsinium
+
+			// smeltables
+			, CopperBar, NickelBar, ZincBar, IronBar, TinBar, Brass, Bronze, Silicone, AluminumBar, Glass, SilverBar, ChromiumBar, AlloySteel, ActivatedCharcoal
+			, StainleeSteel, GoldBar, TitaniumBar, PlatinumBar, Kryptonite, PlutoniumBar, MarsiniumBar
+
+			// craftables
+			, Graphite, Wire, Nail, ArmorPlate, HeatSink, Tools, StrongAxe, Magnet, Pipe, Valve, Can, Spring, Gears, GoldAxe, Foil, Turbine, RubyAxe, Knob, Propeller, Zipper, SapphireAxe, Bearings, Battery, DiamondAxe
+			, Frame, Fuselage, Transformer, CarbonFilter, Solder, KryptoAxe, MicroChip, Mirror, GPS, UltimateWeapon
+
+			// items
+			, Beam, Bridge, Marker, MapPiece, Teleporter
+
+			// unfindables
+			, Rubber, Artifact1,
+
 		Total
 	}
-	public enum ITEMS { Beam, Bridge, Marker, MapPiece, Teleporter }
+	public enum BUILDINGS { OilRig, Jewelry, Market, RadioTower, Terrarium, Telescope, Teleporter }
 	public enum TILE_STATES { Hidden, Visited, Dug, Placed }
 	public enum TILE_GEMTYPES { Single, Mineral, Rhombus, Dagger, Diamond, Heart, Hexagon, Leaf, Triangle }
+	public enum MENUTYPE { Minerals, Bars, Crafts, Bag, Shop, Items, Crafting }
+	static public MENUTYPE menuType;
+	public enum MISSION { }
+
 
 	static public Text txt;
-	[SerializeField]
-	Text goldTxt;
-	static public MUSIC_CLIP currClip = MUSIC_CLIP.DayTime;
-	[HideInInspector]
-	public AudioClip[] music_clips;
-	public static AudioClip[] audioAttacks, audioDeaths;
-	public static float dayTimer = 128f;
-	public static AudioSource musicPlayer, sfxPlayer, transition;
-	//delete when we have a stable size
-	public static uint maxWidth = 240u, maxHeight = 30u;
-	//public static uint[,] bitField;
-	public static bool day = true;
+	public Text goldTxt;
 
-	enum TRANSITION
-	{
-		None,
-		Fade
-	}
-	[SerializeField]
-	TRANSITION trans;
-	AsyncOperation aOp;
-	[SerializeField]
-	RawImage fader;
-	[SerializeField]
-	Transform levelSelect;
-	static public Transform menu;
-	int tempLevel;
+	public static float dayTimer = 0f;
+	//delete when we have a stable size
+	public static uint maxWidth = 6u, maxHeight = 8u;
+	public static bool day = true;
+	static GameObject cloneTile;
+
 	public enum FUNCTIONCALL { Collect, UpgradeMenu, ShopMenu, Upgrade, Sell, Boost, Efficient }
-	static public GameObject loadingScreen;
-	public GameObject backBtn;
 	public LayerMask buttons;
 	public delegate void RayHit(RayButtonScript _hitObject);
 	public static RayHit MouseOver;
@@ -75,38 +71,29 @@ public class MCScript : MonoBehaviour
 	RayButtonScript currPressedBtn, currHeldBtn;
 	public AudioClip click;
 	int indexOfSell;
+	static public Transform menu, mainMenuContent;
 	static public BuildingScript currOpenBuilding;
-	static public SaveMoneyData savedData;
+	static public SaveBothGroundData savedBothData;
+	static SaveBelowData savedBelowData;
+	static SaveAboveData savedAboveData;
 	static public MCScript mcScript;
 	static public CameraMovement cam;
+	public CraftingScript smelt, craft;
 
 	void Awake()
 	{
-		if (levelSelect)
-		{
-			levelSelect.transform.GetChild(1).GetComponent<Button>().interactable = false;
-			Texture[] levelimages = Resources.LoadAll<Texture>("LevelImages");
-			levelSelect.GetChild(2).GetChild(2).GetComponent<RawImage>().texture = levelimages[UnityEngine.Random.Range(0, levelimages.Length)];
-			levelSelect.GetChild(2).GetChild(0).GetComponent<Text>().text = "Level: " + tempLevel;
-			if (tempLevel == 0)
-				levelSelect.GetChild(0).GetComponent<Button>().interactable = false;
-		}
+		cloneTile = Resources.Load<GameObject>("Tile");
 		menu = GameObject.Find("Menus").transform;
+		mainMenuContent = menu.Find("MainMenu").Find("Scroll View").GetChild(0).GetChild(0);
 		txt = GameObject.Find("AmountTxt").GetComponent<Text>();
-		audioAttacks = Resources.LoadAll<AudioClip>("Attacks");
-		audioDeaths = Resources.LoadAll<AudioClip>("Deaths");
-		music_clips = Resources.LoadAll<AudioClip>("Music");
-		DontDestroyOnLoad(gameObject);
-		musicPlayer = GetComponents<AudioSource>()[0];
-		sfxPlayer = GetComponents<AudioSource>()[1];
-		transition = GetComponents<AudioSource>()[2];
-		musicPlayer.ignoreListenerVolume = true;
-		transition.ignoreListenerVolume = true;
-		musicPlayer.PlayOneShot(music_clips[(uint)currClip]);
+
 		//UnityEngine.SceneManagement.SceneManager.LoadScene ( "MainMenu" );
 		mcScript = this;
 		cam = FindObjectOfType<CameraMovement>();
+		PersistentManager.mmScript.SwitchMusic(PersistentManager.MUSIC_CLIP.DayTime);
+		PersistentManager.SetAllAudioSources();
 		LoadStage();
+		TILE_VALUES temp;
 	}
 
 	private void Update()
@@ -122,7 +109,7 @@ public class MCScript : MonoBehaviour
 			else
 			{
 				currHeldBtn = hitInfo.collider.GetComponent<RayButtonScript>();
-				MCScript.PlaySoundEffect(click);
+				PersistentManager.PlaySoundEffect(click);
 			}
 		}
 		else if (Input.GetMouseButtonUp(0))
@@ -148,6 +135,23 @@ public class MCScript : MonoBehaviour
 				currPressedBtn = null;
 			}
 		}
+
+#if UNITY_EDITOR
+		//if (Input.GetKeyDown(KeyCode.Space))
+		//{
+		//	Transform content = menu.Find("MainMenu").Find("Scroll View").GetChild(0).GetChild(0).GetChild(0);
+		//	GameObject bagBtn = GameObject.Find("MineralCountTxt");
+		//	bagBtn.GetComponent<Text>().text = "0";
+		//	List<RandomTravelScript> sparks = new List<RandomTravelScript>();
+		//	Vector3 bagPos = bagBtn.transform.position;
+		//	bagPos.z = 0f;
+		//
+		//	RandomTravelScript spark = Instantiate(Resources.Load<GameObject>("NewItemParticle"), bagPos, Quaternion.identity).GetComponent<RandomTravelScript>();
+		//	spark.aim = content.GetChild(UnityEngine.Random.Range(0, 4));
+		//	spark.offSet = new Vector2(.7f, -.5f);
+		//	spark.timer = 35u;
+		//}
+#endif
 	}
 
 	private void FixedUpdate()
@@ -167,96 +171,16 @@ public class MCScript : MonoBehaviour
 			GameObject.Find("bgSky1").GetComponent<Animator>().SetBool("Transition", day);
 			GameObject.Find("outerSpace").GetComponent<Animator>().SetBool("Transition", day);
 			day = !day;
-			FadeMusic(day ? MUSIC_CLIP.DayTime : MUSIC_CLIP.NightTime);
+			PersistentManager.mmScript.FadeMusic(day ? PersistentManager.MUSIC_CLIP.DayTime : PersistentManager.MUSIC_CLIP.NightTime);
 			// recalculate mineral values
 		}
 	}
 
-	void LoadScreen(string _sceneName)
-	{
-		Time.timeScale = 1;
-		if (menu)
-			menu.gameObject.SetActive(false);
-		if (trans == TRANSITION.Fade)
-			fader.CrossFadeAlpha(1f, 2f, true);
-		if (loadingScreen)
-		{
-			loadingScreen.SetActive(true);
-			StartCoroutine(LoadLevelWithProgressBar(_sceneName));
-		}
-		else
-			SceneManager.LoadSceneAsync(_sceneName);
-	}
-
-	public void SetMusicVol(float _vol)
-	{
-		musicPlayer.volume = _vol;
-		SetSaveKey(SAVEKEY.MusicVolume, _vol);
-	}
-
-	public void SetSFXVol(float _vol)
-	{
-		sfxPlayer.volume = _vol;
-		SetSaveKey(SAVEKEY.SfxVolume, _vol);
-	}
-
-	public void ChangeScene(string _sceneName)
-	{
-		if (_sceneName == "")
-			_sceneName = "Level" + tempLevel;
-		LoadScreen(_sceneName);
-	}
-
-	public void ChangeScene(int _level)
-	{
-		LoadScreen("Level" + _level);
-	}
-
-	public void ChangeScene()
-	{
-		LoadScreen("Level" + tempLevel);
-	}
-
-	public void IncLevel(int _dir)
-	{
-		tempLevel += _dir;
-		Transform left = levelSelect.GetChild(0), right = levelSelect.GetChild(1), start = levelSelect.GetChild(2);
-
-		if (_dir > 0)
-		{
-			levelSelect.GetComponent<Animator>().SetTrigger("Forward");
-			right.GetComponent<RawImage>().texture = start.GetChild(2).GetComponent<RawImage>().texture;
-			left.GetComponent<Button>().interactable = true;
-			if (tempLevel >= PlayerPrefs.GetInt(SAVEKEY.Level.ToString()))
-			{
-				right.GetComponent<Button>().interactable = false;
-				tempLevel = PlayerPrefs.GetInt(SAVEKEY.Level.ToString());
-			}
-		}
-		else
-		{
-			levelSelect.GetComponent<Animator>().SetTrigger("Backward");
-			left.GetComponent<RawImage>().texture = start.GetChild(2).GetComponent<RawImage>().texture;
-			right.GetComponent<Button>().interactable = true;
-			if (tempLevel <= 0)
-			{
-				left.GetComponent<Button>().interactable = false;
-				tempLevel = 0;
-			}
-		}
-		Texture[] levelimages = Resources.LoadAll<Texture>("LevelImages");
-		start.GetChild(2).GetComponent<RawImage>().texture = levelimages[UnityEngine.Random.Range(0, levelimages.Length)];
-		start.GetChild(0).GetComponent<Text>().text = "Level: " + tempLevel;
-
-
-	}
-
 	public void ChangeMenu(GameObject _currMenu)
 	{
-		Animator[] allMenus = menu.GetComponentsInChildren<Animator>();
-		foreach (Animator anim in allMenus)
+		int i = -1; while (++i != menu.childCount)
 		{
-			anim.gameObject.SetActive(false);
+			menu.GetChild(i).gameObject.SetActive(false);
 		}
 		if (_currMenu)
 		{
@@ -264,31 +188,9 @@ public class MCScript : MonoBehaviour
 		}
 	}
 
-	IEnumerator LoadLevelWithProgressBar(string _sceneName)
+	public void ChangeMenuType(int _type)
 	{
-		yield return new WaitForSeconds(1);//avoids loading conflicts
-
-		aOp = SceneManager.LoadSceneAsync(_sceneName);
-
-		aOp.allowSceneActivation = false;
-		Slider loadingProgBar = null;
-		if (loadingScreen)
-			loadingProgBar = loadingScreen.transform.GetChild(0).GetComponent<Slider>();
-		while (!aOp.isDone)
-		{
-			if (loadingProgBar)
-				loadingProgBar.value = aOp.progress;
-
-			if (aOp.progress == 0.9f)
-			{
-				if (loadingProgBar)
-					loadingProgBar.value = 1.0f;
-				aOp.allowSceneActivation = true;
-			}
-
-			yield return null;
-		}
-
+		menuType = (MENUTYPE)_type;
 	}
 
 	public static void Win()
@@ -302,130 +204,160 @@ public class MCScript : MonoBehaviour
 		currOpenBuilding = null;
 	}
 
-	public void SetMainMenu(int _type)
+	public void SetMainMenu()
 	{
 		Transform mainMenu = menu.Find("MainMenu");
-		Transform bagContent = mainMenu.Find("Scroll View").GetChild(0).GetChild(0);
-		if (bagContent.childCount != 0)
+		if (mainMenuContent.childCount != 0)
 		{
-			Destroy(bagContent.GetChild(0).gameObject);
+			Destroy(mainMenuContent.GetChild(0).gameObject);
 		}
 		RectTransform content = (RectTransform)(new GameObject("ContentObject", typeof(RectTransform))).transform;
-		content.transform.SetParent(bagContent, false);
+		content.transform.SetParent(mainMenuContent, false);
 		content.pivot = Vector2.up;
 		content.anchorMin = Vector2.up;
 		content.anchorMax = Vector2.up;
 		content.anchoredPosition = Vector2.zero;
 		Sprite[] collectibles = Resources.LoadAll<Sprite>("Collectibles");
-		GameObject mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
-		if (_type == 3)// if we are setting the bag
-		{
-			// turn off the rest of the menu
-			mainMenu.GetChild(6).gameObject.SetActive(false);
-			mainMenu.GetChild(2).gameObject.SetActive(false);
-			mainMenu.GetChild(3).gameObject.SetActive(false);
-			mainMenu.GetChild(4).gameObject.SetActive(false);
-			mainMenu.GetChild(5).gameObject.SetActive(false);
-			// load the bag in order they were received
-			// this helps finding the item the user just got bc it will be at the end of the list
-			int i = -1; while (++i != PlayerScript.bag.Count)
-			{
-				int mineralIndex = (int)PlayerScript.bag[i].GetIndex();
-				Transform newItem = Instantiate(mineralDisplay, content).transform;
-				Sprite newImage = collectibles[mineralIndex];
-				newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = newImage;
-				newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.bag[i].GetAmount().ToString();
-				newItem.GetChild(2).GetComponent<Text>().text = System.Text.RegularExpressions.Regex.Match(newImage.name, "\\D+").Value;
-				((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
-			}
-			mainMenu.GetChild(7).gameObject.SetActive(i == 0 ? true : false);
-		}
-		else
-		{
-			// turn on the rest of the menu
-			mainMenu.GetChild(6).gameObject.SetActive(true);
-			mainMenu.GetChild(2).gameObject.SetActive(true);
-			mainMenu.GetChild(3).gameObject.SetActive(true);
-			mainMenu.GetChild(4).gameObject.SetActive(true);
-			mainMenu.GetChild(5).gameObject.SetActive(true);
-			mainMenu.GetChild(7).gameObject.SetActive(false);
-			int finish = 32 + 32 * _type;
-			int i = 32 * _type - 1; while (++i != finish)
-			{
-				Transform newItem = Instantiate(mineralDisplay, content).transform;
-				Sprite newImage = collectibles[i];
-				if (savedData.minerals[i] == -1)
-				{
-					newItem.GetChild(0).GetChild(0).gameObject.SetActive(false);
-					newItem.GetChild(0).GetChild(1).gameObject.SetActive(true);
-					newItem.GetChild(1).gameObject.SetActive(false);
-					newItem.GetChild(2).gameObject.SetActive(false);
-				}
-				else
-				{
-					Button.ButtonClickedEvent newEvent = newItem.GetComponent<Button>().onClick;
-					int passedByRef = i;
-					newEvent.AddListener(() => SellMineralMenu(passedByRef));
-					newEvent.AddListener(() => SetSellImage(newItem));
-					newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = newImage;
-					newItem.GetChild(1).GetComponent<Text>().text = savedData.minerals[i].ToString();
-					newItem.GetChild(2).GetComponent<Text>().text = System.Text.RegularExpressions.Regex.Match(newImage.name, "\\D+").Value;
+		GameObject mineralDisplay;
+		int i, finish, offset;
+		// TODO:
+		// adapt the menu for each type
 
+		switch (menuType)
+		{
+			case MENUTYPE.Minerals:
+			case MENUTYPE.Bars:
+			case MENUTYPE.Crafts:
+				mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
+				// turn on the rest of the menu
+				mainMenu.GetChild(6).gameObject.SetActive(true);
+				mainMenu.GetChild(2).gameObject.SetActive(true);
+				mainMenu.GetChild(3).gameObject.SetActive(true);
+				mainMenu.GetChild(4).gameObject.SetActive(true);
+				mainMenu.GetChild(5).gameObject.SetActive(true);
+				mainMenu.GetChild(7).gameObject.SetActive(false);
+				mainMenu.GetChild(8).gameObject.SetActive(false);
+				mainMenu.GetChild(9).gameObject.SetActive(false);
+				Transform tab = mainMenu.Find("Tabs");
+				switch (menuType)
+				{
+					case MENUTYPE.Bars:
+						ChangeTabColor(tab.GetChild(1));
+						i = (int)COLLECTIBLES.Marsinium;
+						finish = (int)COLLECTIBLES.Graphite;
+						break;
+					case MENUTYPE.Crafts:
+						ChangeTabColor(tab.GetChild(2));
+						i = (int)COLLECTIBLES.MarsiniumBar;
+						finish = (int)COLLECTIBLES.Beam;
+						break;
+					default:
+						ChangeTabColor(tab.GetChild(0));
+						i = -1;
+						finish = (int)COLLECTIBLES.CopperBar;
+						break;
 				}
-				((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + ((i - 32 * _type) % 3) * 194, -8 - 304 * ((i - 32 * _type) / 3));
-			}
+				offset = i + 1;
+				while (++i != finish)
+				{
+					Transform newItem = Instantiate(mineralDisplay, content).transform;
+					if (savedAboveData.collectibles[i] == -1)
+					{
+						newItem.GetChild(0).GetChild(0).gameObject.SetActive(false);// image
+						newItem.GetChild(0).GetChild(1).gameObject.SetActive(true);// quetion mark
+					}
+					else
+					{
+						Button.ButtonClickedEvent newEvent = newItem.GetComponent<Button>().onClick;
+						int passedByRef = i;
+						newEvent.AddListener(() => SellMineralMenu(passedByRef));
+						newEvent.AddListener(() => SetSellImage(newItem));
+						newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i];// image
+						newItem.GetChild(1).GetComponent<Text>().text = savedAboveData.collectibles[i].ToString();// count
+						newItem.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)i).ToString();// name
+
+					}
+					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + ((i - offset) % 3) * 194, -8 - 304 * ((i - offset) / 3));
+				}
+				break;
+			case MENUTYPE.Bag:
+				mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
+				// turn off the rest of the menu
+				mainMenu.GetChild(6).gameObject.SetActive(false);
+				mainMenu.GetChild(2).gameObject.SetActive(false);
+				mainMenu.GetChild(3).gameObject.SetActive(false);
+				mainMenu.GetChild(4).gameObject.SetActive(false);
+				mainMenu.GetChild(5).gameObject.SetActive(false);
+				mainMenu.GetChild(8).gameObject.SetActive(true);
+				mainMenu.GetChild(9).gameObject.SetActive(true);
+				// load the bag in order they were received
+				// this helps finding the item the user just got bc it will be at the end of the list
+				i = -1; while (++i != PlayerScript.bag.Count)
+				{
+					int mineralIndex = (int)PlayerScript.bag[i].GetIndex();
+					Transform newItem = Instantiate(mineralDisplay, content).transform;
+					Sprite newImage = collectibles[mineralIndex];
+					newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = newImage;
+					newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.bag[i].GetAmount().ToString();
+					newItem.GetChild(2).GetComponent<Text>().text = System.Text.RegularExpressions.Regex.Match(newImage.name, "\\D+").Value;
+					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
+				}
+				mainMenu.GetChild(7).gameObject.SetActive(i == 0 ? true : false);
+
+				break;
+			case MENUTYPE.Shop:
+			case MENUTYPE.Items:
+				mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
+				i = (int)COLLECTIBLES.UltimateWeapon;
+				finish = (int)COLLECTIBLES.Total;
+				while (++i != finish)
+				{
+					int mineralIndex = (int)PlayerScript.bag[i].GetIndex();
+					Transform newItem = Instantiate(mineralDisplay, content).transform;
+					Sprite newImage = collectibles[mineralIndex];
+					newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = newImage;
+					newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.bag[i].GetAmount().ToString();
+					newItem.GetChild(2).GetComponent<Text>().text = System.Text.RegularExpressions.Regex.Match(newImage.name, "\\D+").Value;
+					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
+				}
+				break;
+			default:
+				break;
 		}
+
 	}
 
-	static public void GoUp()
+	public void GoUp()
 	{
-		savedData = GetSavedData();
-		SaveStage();
-		GameObject bagBtn = GameObject.Find("MineralCountTxt");
-		bagBtn.GetComponent<Text>().text = "0";
-		cam.SetCameraMode(-1);
-		List<RandomTravelScript> sparks = new List<RandomTravelScript>();
-		List<uint> indices = new List<uint>();
-		foreach (TypeAmount item in PlayerScript.bag)
+		int i = -1; while (++i != differentItemCount)
 		{
-			uint index = item.GetIndex();
-			indices.Add(index);
-			if (savedData.minerals[index] == -1)
-			{
-				// TODO:
-				// new Animation
-			}
-			sparks.Add( Instantiate(Resources.Load<GameObject>("NewItemParticle"),Camera.main.ScreenToWorldPoint(bagBtn.transform.position),Quaternion.identity).GetComponent<RandomTravelScript>());
-			savedData.minerals[index] += (int)item.GetAmount();
+			SavedAboveData.collectibles[i + (int)COLLECTIBLES.Beam] = PlayerScript.items[i];
 		}
-		int i = -1; while (++i != PlayerScript.items.Length)
-		{
-			savedData.items[i] = PlayerScript.items[i];
-		}
-		PlayerScript.bag = new List<TypeAmount>();
-		Transform mainMenu = menu.Find("MainMenu");
-		mainMenu.gameObject.SetActive(true);
-		mcScript.SetMainMenu(0);
-		Transform content = mainMenu.Find("Scroll View").GetChild(0).GetChild(0).GetChild(0);
-		i = -1; while (++i!=indices.Count)
-		{
-			sparks[i].aim = Camera.main.ScreenToWorldPoint(content.GetChild((int)indices[i]).position);
-		}
-		SaveData(savedData);
+		GameObject.Find("LowerMenu").SetActive(false);
+		// this sets the main menu
+		// this also saves the data after it loops through the bag
+		// also gets rid of bag data
+		StartCoroutine(CreateSparks());
 	}
 
 	public void GoDown()
 	{
-		SaveData(savedData);
-		savedData = null;
+		// make sure the player has the items it might of boughten
+		int i = -1; while (++i != differentItemCount)
+		{
+			PlayerScript.items[i] = (ushort)SavedAboveData.collectibles[i + (int)COLLECTIBLES.Beam];
+		}
+		SaveAll(savedBothData, SavedAboveData);
+		savedAboveData = null;
 	}
 
 	public void SellMineralMenu(int _index)
 	{
 		Transform sellMenu = menu.Find("SellMenu");
+		menu.Find("MainMenu").gameObject.SetActive(false);
 		sellMenu.gameObject.SetActive(true);
 		indexOfSell = _index;
-		sellMenu.Find("ValueTxt").GetComponent<Text>().text = "Today's Value: " + (indexOfSell < 0 ? savedData.itemCosts[Mathf.Abs(indexOfSell+1)].ToString("F2") : savedData.dailyMineralValues[indexOfSell].ToString("F2"));
+		sellMenu.Find("ValueTxt").GetComponent<Text>().text = "Today's Price: " + savedAboveData.dailyMineralValues[indexOfSell].ToString("F2");
 
 		Slider slider = sellMenu.Find("Slider").GetComponent<Slider>();
 		ChangeTabColor(sellMenu.Find("Tabs").GetChild(0));
@@ -456,7 +388,7 @@ public class MCScript : MonoBehaviour
 		{
 			goldValTxt.text = "Gold:\n-";
 		}
-		goldValTxt.text += slider.value * (indexOfSell < 0 ? savedData.itemCosts[Mathf.Abs(indexOfSell+1)] : savedData.dailyMineralValues[indexOfSell]);
+		goldValTxt.text += slider.value * savedAboveData.dailyMineralValues[indexOfSell];
 	}
 
 	public void SetSellValueWKeys(string _input)
@@ -472,11 +404,11 @@ public class MCScript : MonoBehaviour
 
 		if (sellMenu.Find("SellBtn").gameObject.activeSelf)
 		{
-			slider.maxValue = (indexOfSell < 0 ? savedData.items[Mathf.Abs(indexOfSell+1)] : savedData.minerals[indexOfSell]);
+			slider.maxValue = savedAboveData.collectibles[indexOfSell];
 		}
 		else
 		{
-			slider.maxValue = (indexOfSell < 0 ? (int)savedData.gold / savedData.itemCosts[Mathf.Abs(indexOfSell + 1)] : (int)savedData.gold / (int)savedData.dailyMineralValues[indexOfSell]);
+			slider.maxValue = (int)savedBothData.gold / (int)savedAboveData.dailyMineralValues[indexOfSell];
 		}
 		sellMenu.Find("TotalTxt").GetComponent<Text>().text = "Total:\n" + slider.maxValue;
 		SetSellValue(slider.value);
@@ -486,20 +418,12 @@ public class MCScript : MonoBehaviour
 	{
 		Transform sellMenu = menu.Find("SellMenu");
 		int value = (int)sellMenu.Find("Slider").GetComponent<Slider>().value * (_selling ? -1 : 1);
-		if (indexOfSell<0)
-		{
-			savedData.items[Mathf.Abs(indexOfSell + 1)] += (ushort)value;
-			savedData.gold -= value * savedData.itemCosts[Mathf.Abs(indexOfSell + 1)];
-		}
-		else
-		{
-			savedData.minerals[indexOfSell] += value;
-			savedData.gold -= value * savedData.dailyMineralValues[indexOfSell];
-		}
+		savedAboveData.collectibles[indexOfSell] += value;
 		SetSliderMax();
-		goldTxt.text = savedData.gold.ToString("F2");
+		ChangeGold(-value * savedAboveData.dailyMineralValues[indexOfSell]);
 		// don't save here to allow for mistakes (they can restart and take it back)
-		//SaveData(savedData);
+		// on second thought, the price for sale and buy is the same...
+		//SaveData(savedAboveData);
 	}
 
 	public void ChangeTabColor(Transform _tab)
@@ -516,16 +440,15 @@ public class MCScript : MonoBehaviour
 				child.color = faded;
 			}
 		}
-
 	}
 
 	public void ButtonClicked(int _function)
 	{
-		PlaySoundEffect(click);
+		PersistentManager.PlaySoundEffect(click);
 		switch ((FUNCTIONCALL)_function)
 		{
 			case FUNCTIONCALL.Collect:
-				savedData.gold += currOpenBuilding.collection;
+				savedBothData.gold += currOpenBuilding.collection;
 				txt.transform.position = Camera.main.WorldToScreenPoint(transform.position);
 				txt.color = Color.yellow;
 				currOpenBuilding.collection = 0f;
@@ -560,6 +483,7 @@ public class MCScript : MonoBehaviour
 
 	public void Quit()
 	{
+		SaveAll(savedBothData, SavedBelowData, SavedAboveData);
 		Application.Quit();
 	}
 
@@ -580,37 +504,124 @@ public class MCScript : MonoBehaviour
 		return Mathf.Pow(_direction.x, 2f) + Mathf.Pow(_direction.y, 2f);
 	}
 
-	static public void SaveStage()
+	static public void SaveAll(SaveBothGroundData _bothData, SaveAboveData _aboveData)
+	{
+		FileStream fs = File.Create(Application.persistentDataPath + saveBothFile);
+		new BinaryFormatter().Serialize(fs, _bothData);
+		fs.Close();
+
+		SaveAboveOnly(_aboveData);
+	}
+
+	static public void SaveAll(SaveBothGroundData _bothData, SaveBelowData _belowData)
 	{
 		BinaryFormatter bf = new BinaryFormatter();
-		FileStream fs = File.Create(Application.persistentDataPath + saveName);
-		SaveData saveData = new SaveData();// creates the information based on what is currently in the scene
-		bf.Serialize(fs, saveData);
+		FileStream fs = File.Create(Application.persistentDataPath + saveStageFile);
+		bf.Serialize(fs, new StageData());
+		fs.Close();
+
+		fs = File.Create(Application.persistentDataPath + saveBothFile);
+		bf.Serialize(fs, _bothData);
+		fs.Close();
+
+		fs = File.Create(Application.persistentDataPath + saveBelowFile);
+		bf.Serialize(fs, _belowData);
 		fs.Close();
 	}
 
-	static public void SaveData(SaveMoneyData _data)
+	static public void SaveAll(SaveBothGroundData _bothData, SaveBelowData _belowData, SaveAboveData _aboveData)
 	{
 		BinaryFormatter bf = new BinaryFormatter();
-		FileStream fs = File.Create(Application.persistentDataPath + saveName2);
-		bf.Serialize(fs, _data);
+
+		FileStream fs = File.Create(Application.persistentDataPath + saveStageFile);
+		bf.Serialize(fs, new StageData());
+		fs.Close();
+
+		fs = File.Create(Application.persistentDataPath + saveBothFile);
+		bf.Serialize(fs, _bothData);
+		fs.Close();
+
+		fs = File.Create(Application.persistentDataPath + saveBelowFile);
+		bf.Serialize(fs, _belowData);
+		fs.Close();
+
+		SaveAboveOnly(_aboveData);
+	}
+
+	static public void SaveAboveOnly(SaveAboveData _data)
+	{
+		FileStream fs = File.Create(Application.persistentDataPath + saveAboveFile);
+		_data.smeltInd = mcScript.smelt.index;
+		_data.craftIndex = mcScript.craft.index;
+		_data.smeltTime = mcScript.smelt.lastAccessed.AddSeconds(-mcScript.smelt.currTime);
+		_data.craftTime = mcScript.craft.lastAccessed.AddSeconds(-mcScript.craft.currTime);
+
+		new BinaryFormatter().Serialize(fs, _data);
 		fs.Close();
 	}
 
-	static public SaveMoneyData GetSavedData()
+	// for safety
+	static public SaveAboveData SavedAboveData
 	{
-		BinaryFormatter bf = new BinaryFormatter();
-		FileStream fs = File.Open(Application.persistentDataPath + saveName2, FileMode.Open);
-		SaveMoneyData saved = (SaveMoneyData)bf.Deserialize(fs);
-		fs.Close();
-		return saved;
+		get
+		{
+			if (savedAboveData == null)
+			{
+				FileStream fs = File.Open(Application.persistentDataPath + saveAboveFile, FileMode.Open);
+				savedAboveData = (SaveAboveData)new BinaryFormatter().Deserialize(fs);
+				fs.Close();
+			}
+			return savedAboveData;
+		}
+		set
+		{
+			savedAboveData = value;
+		}
+	}
+
+	// for safety
+	static public SaveBelowData SavedBelowData
+	{
+		get
+		{
+			if (savedBelowData == null)
+			{
+				BinaryFormatter bf = new BinaryFormatter();
+				FileStream fs = File.Open(Application.persistentDataPath + saveBelowFile, FileMode.Open);
+				savedBelowData = (SaveBelowData)bf.Deserialize(fs);
+				fs.Close();
+			}
+			return savedBelowData;
+		}
+		set
+		{
+			savedBelowData = value;
+		}
+	}
+
+	static public void CreateTile(Vector2 _pos, float depth)
+	{
+		Tile newTile = Instantiate(cloneTile, _pos, Quaternion.AngleAxis(90 * UnityEngine.Random.Range(0, 4), Vector3.forward)).GetComponent<Tile>();
+		newTile.hp = (sbyte)FullHpForDepth(_pos.y);
+		int chance = UnityEngine.Random.Range(0, 500);
+		if (chance < 330)
+			newTile.value = (byte)TILE_VALUES.Dirt;
+		else if (chance < 337)
+			newTile.value = (byte)TILE_VALUES.Stone;
+		else if (chance < 340)
+			newTile.value = (byte)TILE_VALUES.Oil;
+		else if (chance < 345)
+			newTile.value = (byte)TILE_VALUES.Map;
+		else if (chance == 345)
+			newTile.value = (byte)TILE_VALUES.Treasure;
+		else
+			// minerals
+			newTile.value = (byte)Map(Mathf.Min(1000f, (depth * .5f + 2f) * Mathf.Log((chance - 345), 1.3f)), 0f, 1000f, (float)TILE_VALUES.Coal, (float)(TILE_VALUES.Total - 1));
 	}
 
 	static public void LoadNew()
 	{
-		// initialize to -1 s0 we know we dont have it and haven't unlocked it
 		Vector2 gridPos;
-		GameObject cloneTile = Resources.Load<GameObject>("Tile");
 		uint x = uint.MaxValue; while (++x != maxWidth)
 		{
 			uint y = x == 0u ? 0u : uint.MaxValue;
@@ -618,48 +629,39 @@ public class MCScript : MonoBehaviour
 			{
 				gridPos.x = 2u * x;// 2 is the size of the objects (200 pixles, and the world is set to 100 pixels per unit)
 				gridPos.y = -2u * y;
-				Tile newTile = Instantiate(cloneTile, gridPos, Quaternion.AngleAxis(90 * UnityEngine.Random.Range(0, 4), Vector3.forward)).GetComponent<Tile>();
-				newTile.hp = (sbyte)FullHpForDepth(gridPos.y);
-				int chance = UnityEngine.Random.Range(0, 500);
-				if (chance < 330)
-					newTile.value = (byte)TILE_VALUES.Dirt;
-				else if (chance < 337)
-					newTile.value = (byte)TILE_VALUES.Stone;
-				else if (chance < 340)
-					newTile.value = (byte)TILE_VALUES.Oil;
-				else if (chance < 345)
-					newTile.value = (byte)TILE_VALUES.Map;
-				else if (chance == 345)
-					newTile.value = (byte)TILE_VALUES.Treasure;
-				else
-					newTile.value = (byte)Map(Mathf.Min(1000f, (y * .5f + 2f) * Mathf.Log((chance - 345), 1.3f)), 0f, 1000f, (float)TILE_VALUES.Coal, (float)(TILE_VALUES.Total - 1));
+				CreateTile(gridPos, y);
 			}
 		}
-		SaveStage();
-		savedData = new SaveMoneyData();
-		SaveData(savedData);
+		savedAboveData = new SaveAboveData();
+		savedBothData = new SaveBothGroundData();
+		SaveAll(savedBothData, new SaveBelowData(), savedAboveData);
 	}
 
-	static public void LoadStage()
+	public void LoadStage()
 	{
-		if (File.Exists(Application.persistentDataPath + saveName))
+		if (File.Exists(Application.persistentDataPath + saveStageFile))
 		{
 			BinaryFormatter bf = new BinaryFormatter();
-			FileStream fs = File.Open(Application.persistentDataPath + saveName, FileMode.Open);
+			FileStream fs = File.Open(Application.persistentDataPath + saveStageFile, FileMode.Open);
 			try
 			{
-				SaveData saveData = (SaveData)bf.Deserialize(fs);
+				StageData saveStageData = (StageData)bf.Deserialize(fs);
 				fs.Close();
-				fs = File.Open(Application.persistentDataPath + saveName2, FileMode.Open);
-				savedData = (SaveMoneyData)bf.Deserialize(fs);
+				// above
+				fs = File.Open(Application.persistentDataPath + saveAboveFile, FileMode.Open);
+				savedAboveData = (SaveAboveData)bf.Deserialize(fs);
 				fs.Close();
-				//bitField = saveData.bitField;
+				// both
+				fs = File.Open(Application.persistentDataPath + saveBothFile, FileMode.Open);
+				savedBothData = (SaveBothGroundData)bf.Deserialize(fs);
+				fs.Close();
+
 				Vector2 gridPos;
 				GameObject cloneTile = Resources.Load<GameObject>("Tile");
 				const int minV = -1;
-				int x = saveData.saveTiles.Length; while (--x != minV)
+				int x = saveStageData.saveTiles.Length; while (--x != minV)
 				{
-					SaveData.SaveTile saveTile = saveData.saveTiles[x];
+					StageData.SaveTile saveTile = saveStageData.saveTiles[x];
 					gridPos.x = saveTile.x;
 					gridPos.y = saveTile.y;
 					Tile newTile = Instantiate(cloneTile, gridPos, Quaternion.AngleAxis(90 * UnityEngine.Random.Range(0, 4), Vector3.forward)).GetComponent<Tile>();
@@ -682,20 +684,21 @@ public class MCScript : MonoBehaviour
 				}
 				cloneTile = Resources.Load<GameObject>("Building");
 				gridPos.y = 2.5f;
-				x = saveData.saveBuildings.Length; while (--x != minV)
+				x = saveStageData.saveBuildings.Length; while (--x != minV)
 				{
-					SaveData.SaveBuilding saveBuilding = saveData.saveBuildings[x];
+					StageData.SaveBuilding saveBuilding = saveStageData.saveBuildings[x];
 					gridPos.x = saveBuilding.xPos;
 					BuildingScript newBuilding = Instantiate(cloneTile, gridPos, Quaternion.identity).GetComponent<BuildingScript>();
 					newBuilding.type = saveBuilding.buildingType;
 					newBuilding.efficiency = saveBuilding.efficiency;
-					newBuilding.efficiency -= .0000001f * (float)(System.DateTime.Now - savedData.currTime).TotalSeconds / Time.fixedDeltaTime;// the .0001 is from building scripts update.
+					newBuilding.efficiency -= .0000001f * (float)(DateTime.Now - savedAboveData.currTime).TotalSeconds / Time.fixedDeltaTime;// the .0001 is from building scripts update.
 					if (newBuilding.efficiency < .5f)
 					{
 						newBuilding.efficiency = .5f;
 					}
 				}
-				mcScript.goldTxt.text = savedData.gold.ToString("F2");
+				mcScript.goldTxt.text = savedBothData.gold.ToString("F2");
+				GameObject.Find("MineralCountTxt").GetComponent<UnityEngine.UI.Text>().text = "0/" + savedBothData.bagSize;
 				// TODO:
 				// update timers
 				//
@@ -710,97 +713,268 @@ public class MCScript : MonoBehaviour
 		{
 			LoadNew();
 		}
-	}
 
-	public void ResetKeys()
-	{
-		uint i = uint.MaxValue;
-		while (++i != (uint)SAVEKEY.Total)
-			PlayerPrefs.SetFloat(System.Enum.GetName(typeof(SAVEKEY), i), 0f);
-	}
+		// TODO:
+		// after we have balanced the game, we can get rid of the unity editor objects and just create them with code
+		// this will require a lot of magic numbers that I don't want to deal with right now
 
-	static public void SetSaveKey(SAVEKEY _saveKey, float _val)
-	{
-		PlayerPrefs.SetFloat(_saveKey.ToString(), _val);
-	}
-
-	public void SwitchMusic(MUSIC_CLIP _newclip)
-	{
-		if (_newclip == currClip)
+		Texture[] textures = Resources.LoadAll<Texture>("Collectibles");// all the different collectible images loaded once to prevent a bunch of resource collection
+		Transform smeltMenu = menu.Find("Smelting");
+		smeltMenu.gameObject.SetActive(true);
+		Transform content = smeltMenu.GetChild(1).GetChild(0).GetChild(0);
+		Button[] buyButtons = content.GetComponentsInChildren<Button>();// grabs all the buttons in order (make sure in unity to keep them in order
+		GameObject costImage = Resources.Load<GameObject>("CostImage");// the individual object for every cost (I think it's easier then actually adding and changing the images manually)
+		int j = -1; while (++j != buyButtons.Length)
 		{
-			return;
+			Button buyButton = buyButtons[j];
+			Transform buyBtnTransform = buyButton.transform;
+			int indexOfCrafts = j + (int)COLLECTIBLES.CopperBar;
+			CostScript costScript = buyButton.GetComponent<CostScript>();
+			textures[indexOfCrafts].name = indexOfCrafts.ToString();
+			buyBtnTransform.GetChild(0).GetComponent<RawImage>().texture = textures[indexOfCrafts];// so I don't have to change them in Unity manually
+			Text btnTxt = buyBtnTransform.GetChild(1).GetComponent<Text>();
+			buyBtnTransform.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)indexOfCrafts).ToString();// name
+			buyButton.onClick.AddListener(() => ClickedBuyButton(buyBtnTransform));// honestly just being lazy here lol
+
+			int available = savedAboveData.collectibles[indexOfCrafts];
+			if (available == -1)
+			{
+				btnTxt.text = costScript.buy.ToString();
+			}
+			else
+			{
+				Destroy(buyBtnTransform.GetChild(0).GetChild(0).gameObject);
+				btnTxt.text = "Craft";
+			}
+			//create a costimage for every cost
+			int i = -1; while (++i != costScript.costs.Length)
+			{
+				Transform newCostImage = Instantiate(costImage, buyBtnTransform).transform;
+				newCostImage.localPosition = new Vector3((((RectTransform)newCostImage.transform).offsetMin.x - ((RectTransform)newCostImage.transform).offsetMax.x) * (i + 1) - 90f, -7f);
+				newCostImage.GetComponent<RawImage>().texture = textures[(int)costScript.indices[i]];// each texture has a number, so I don't need to save the indices
+				Text costImageTxt = newCostImage.GetChild(0).GetComponent<Text>();// this will be used for the cost in the future
+				costImageTxt.text = costScript.costs[i].ToString();
+				if (costScript.costs[i] > available)
+				{
+					costImageTxt.color = new Color(.7f, 0f, 0f, 1f);
+				}
+			}
+			Destroy(costScript);// my genius idea so I don't have to keep this memory!
 		}
-		musicPlayer.Stop();
-		currClip = _newclip;
-		musicPlayer.PlayOneShot(music_clips[(uint)currClip]);
-	}
-
-	public void FadeMusic(MUSIC_CLIP _newclip)
-	{
-		if (_newclip == currClip)
+		// smelt index has to come first, bc crafting can be based off of the amounts
+		if (savedAboveData.smeltInd != -1)
 		{
-			return;
-		}
-		currClip = _newclip;
-		if (musicPlayer.isPlaying)
-		{
-			transition.PlayOneShot(music_clips[(uint)_newclip]);
-			StartCoroutine(FadeInAndOut(transition, musicPlayer));
+			smelt.index = savedAboveData.smeltInd;
+			smelt.lastAccessed = savedAboveData.smeltTime;
+			smelt.StartCraft(content.GetChild(0).GetChild(savedAboveData.smeltInd - (int)COLLECTIBLES.CopperBar));
 		}
 		else
 		{
-			musicPlayer.PlayOneShot(music_clips[(uint)_newclip]);
-			StartCoroutine(FadeInAndOut(musicPlayer, transition));
+			smelt.index = -1;
 		}
-	}
-
-	static public void PlaySoundEffect(AudioClip _clip)
-	{
-		sfxPlayer.PlayOneShot(_clip);
-	}
-
-	static public void PlayRandomAttack()
-	{
-		sfxPlayer.PlayOneShot(audioAttacks[UnityEngine.Random.Range(0, audioAttacks.Length)]);
-	}
-
-	static public void PlayRandomDeath()
-	{
-		sfxPlayer.PlayOneShot(audioDeaths[UnityEngine.Random.Range(0, audioDeaths.Length)]);
-	}
-
-	IEnumerator FadeInAndOut(AudioSource _in, AudioSource _out)
-	{
-		const float transSpeed = .003f;
-		while (_in.volume < .985f)
+		if (savedAboveData.craftIndex != -1)
 		{
-			_in.volume += transSpeed;
-			_out.volume -= transSpeed;
-			yield return null;
+			craft.index = savedAboveData.craftIndex;
+			craft.lastAccessed = savedAboveData.craftTime;
+			craft.StartCraft(content.GetChild(1).GetChild(savedAboveData.craftIndex - (int)COLLECTIBLES.Graphite));
 		}
-		_in.volume = 1f;
-		_out.volume = 0f;
-		_out.Stop();
+		else
+		{
+			craft.index = -1;
+		}
+		smeltMenu.gameObject.SetActive(false);
+	}
+
+	static public void IncreaseResource(int _index, int _amount = 1)
+	{
+		if (SavedAboveData.collectibles[_index] == -1 /*&& _amount > 0/*redudant check, this should never happen*/)
+		{
+			SavedAboveData.collectibles[_index] = 0;
+		}
+		SavedAboveData.collectibles[_index] += _amount;
+		if (mainMenuContent.gameObject.activeInHierarchy)
+		{
+			int offset;
+			switch (menuType)
+			{
+				case MENUTYPE.Bars:
+					offset = (int)COLLECTIBLES.CopperBar;
+					if (_index < offset || _index > (int)COLLECTIBLES.MarsiniumBar)
+					{
+						return;
+					}
+					break;
+				case MENUTYPE.Crafts:
+					offset = (int)COLLECTIBLES.Graphite;
+					if (_index < offset || _index > (int)COLLECTIBLES.UltimateWeapon)
+					{
+						return;
+					}
+					break;
+				default:
+					offset = 0;
+					if (_index > (int)COLLECTIBLES.Marsinium)
+					{
+						return;
+					}
+					break;
+			}
+			mainMenuContent.GetChild(0).GetChild(_index - offset).GetChild(1).GetComponent<Text>().text = SavedAboveData.collectibles[_index].ToString();// count
+		}
+	}
+
+	// called from editor
+	public void UpdateCraftPrices(Transform _content)
+	{
+		if (_content.gameObject.activeInHierarchy)
+		{
+			int offset = (int)(_content.GetSiblingIndex() == 0 ? COLLECTIBLES.CopperBar : COLLECTIBLES.Graphite);
+			Button[] buyButtons = _content.GetComponentsInChildren<Button>();// grabs all the buttons in order (make sure in unity to keep them in order
+			int j = -1; while (++j != buyButtons.Length)
+			{
+				Button buyButton = buyButtons[j];
+				// making a map/ditionary seems way more efficient for speed purposes, but this only happens at human speed. 
+				bool canClick = true;
+				int i = buyButton.transform.childCount; while (--i != 3)// there are 4 children already before we add the costimages
+				{
+					Transform costImage = buyButton.transform.GetChild(i);
+					Text costImageTxt = costImage.GetChild(0).GetComponent<Text>();
+					int cost = int.Parse(System.Text.RegularExpressions.Regex.Match(costImageTxt.text, "\\d+").Value);
+					//																							the index of the costimage
+					int available = savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetComponent<RawImage>().texture.name, "\\d+").Value)];// might be able to remove the -1
+					if (cost > available)
+					{
+						canClick = false;
+						costImageTxt.color = Color.red;
+					}
+					else
+					{
+						costImageTxt.color = Color.white;
+					}
+					costImageTxt.text = cost.ToString() + '/' + (available != -1 ? available : 0);
+
+				}
+				if (savedAboveData.collectibles[j + offset] == -1)
+				{
+					//																		the txt on the btn (gold cost)
+					canClick = int.Parse(System.Text.RegularExpressions.Regex.Match(buyButton.transform.GetChild(1).GetComponent<Text>().text, "\\d+").Value) <= savedBothData.gold;
+				}
+				// the button should only be clickable if you can actually unlock or start crafting.
+				buyButton.interactable = canClick;
+			}
+		}
+	}
+
+	static public void ClickedBuyButton(Transform _buyButton)
+	{
+		// I think it might be faster to grab the index out of the image but im not sure
+		Transform main = _buyButton.GetChild(0);
+		if (main.childCount != 0)
+		{
+			Destroy(main.GetChild(0).gameObject);
+			Text btnText = _buyButton.GetChild(1).GetComponent<Text>();
+			// the cost is stored in the btn text initally until it is unlocked
+			float goldAmount = int.Parse(System.Text.RegularExpressions.Regex.Match(btnText.text, "\\d+").Value);
+			savedBothData.gold -= goldAmount;
+			SetText("Gold -$" + goldAmount.ToString("F0"), Color.yellow, Camera.main.WorldToScreenPoint(_buyButton.position));
+			// the image has the index number in its name, and we need to set the value from -1 to 0
+			string helpme = System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<RawImage>().texture.name, "\\d+").Value;
+			savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<RawImage>().texture.name, "\\d+").Value)] = 0;
+			btnText.text = "Craft";
+			mcScript.UpdateCraftPrices(_buyButton.parent);// have to update all the the buttons bc you might not have enough gold to unlock them anymore
+		}
+		else
+		{
+			switch (_buyButton.parent.GetSiblingIndex())
+			{
+				case 0:
+					mcScript.smelt.SetCraft(_buyButton);
+					break;
+				case 1:
+					mcScript.craft.SetCraft(_buyButton);
+					break;
+				case 2:
+					//TODO:
+					// make buildings work
+					break;
+				default:
+					break;
+			}
+		}
+		SaveAboveOnly(savedAboveData);
+	}
+
+	static public void SetText(string _text, Color _color, Vector3 _position)
+	{
+		txt.text = _text;
+		txt.color = _color;
+		txt.transform.position = _position;
+	}
+
+	static public void ChangeGold(float _amount)
+	{
+		savedBothData.gold += _amount;
+		mcScript.goldTxt.text = savedBothData.gold.ToString("F2");
+	}
+
+	IEnumerator CreateSparks()
+	{
+		GameObject bagBtn = GameObject.Find("MineralCountTxt");
+		List<uint> indices = new List<uint>();
+		bagBtn.GetComponent<Text>().text = "0/" + savedBothData.bagSize;
+		Vector3 bagPos = bagBtn.transform.position;
+		bagPos.z = 0f;
+		foreach (TypeAmount item in PlayerScript.bag)
+		{
+			uint index = item.GetIndex();
+			indices.Add(index);
+			if (savedAboveData.collectibles[index] == -1)
+			{
+				savedAboveData.collectibles[index] = 0;
+				// TODO:
+				// new Animation
+			}
+			savedAboveData.collectibles[index] += (int)item.GetAmount();
+		}
+		menuType = MENUTYPE.Minerals;
+		mcScript.SetMainMenu();
+		PlayerScript.bag = new List<TypeAmount>();// erase the data in the bag
+		Transform mainMenu = menu.Find("MainMenu");
+		mainMenu.gameObject.SetActive(true);
+
+		// create the sparks
+		Transform content = mainMenuContent.GetChild(0);// the content is located pretty for down
+		Vector2 offset = new Vector2(.7f, -.5f);
+		GameObject sparkObj = Resources.Load<GameObject>("NewItemParticle");
+		int i = -1; while (++i != indices.Count)
+		{
+			RandomTravelScript spark = Instantiate(sparkObj, bagPos, Quaternion.identity).GetComponent<RandomTravelScript>();
+			spark.aim = content.GetChild((int)indices[i]);
+			spark.offSet = offset;
+			spark.timer = 70u;
+			yield return new WaitForSeconds(.4f);
+		}
+		SaveAll(savedBothData, SavedBelowData, SavedAboveData);
+		savedBelowData = null;
 		yield break;
 	}
 }
 
+// at this point im only using it for the player bag bc of my genius idea with the shop
+// TODO:
+// delete this if we dont need it
 public struct TypeAmount
 {
-	// the first 7 to the left are which index (0-95 (127 total))
+	// the first 7 to the left are the index ((max of 127))
 	// the rest are the amount (max of 33,554,431)
 	uint value;
-	public TypeAmount(uint _value)
+	public TypeAmount(uint index, uint _amount = 0u)
 	{
-		value = _value;
+		value = (index << 25) | _amount;
 	}
-	public TypeAmount(MCScript.TILE_VALUES _value)
+	public static implicit operator TypeAmount(uint value)
 	{
-		value = ((uint)(_value - MCScript.TILE_VALUES.Coal)) << 25;
-	}
-	public TypeAmount(MCScript.COLLECTIBLES _value)
-	{
-		value = ((uint)_value) << 25;
+		return new TypeAmount(value);
 	}
 	public uint GetIndex()
 	{
@@ -813,51 +987,28 @@ public struct TypeAmount
 	}
 	public void SetAmount(uint _value)
 	{
+		value = GetIndex();
 		value |= _value;
 	}
 	public static TypeAmount operator +(TypeAmount first, uint second)
 	{
 		// no bit manipulation required bc the index is on the left. (if values start going above max, we will need to do something different)
-		return new TypeAmount(first.value + second);
-
-	}
-	public static implicit operator TypeAmount(uint value)
-	{
-		return new TypeAmount(value);
-	}
-	public static implicit operator TypeAmount(MCScript.TILE_VALUES value)
-	{
-		return new TypeAmount(value);
-	}
-	static public bool operator ==(TypeAmount _first, TypeAmount _second)
-	{
-		return (_first.value & 0xFE000000) == (_second.value & 0xFE000000);
-	}
-	static public bool operator !=(TypeAmount _first, TypeAmount _second)
-	{
-		return (_first.value & 0xFE000000) != (_second.value & 0xFE000000);
-	}
-	static public bool operator ==(TypeAmount _first, uint _second)
-	{
-		return (_first.value & 0xFE000000) == (_second & 0xFE000000);
-	}
-	static public bool operator !=(TypeAmount _first, uint _second)
-	{
-		return (_first.value & 0xFE000000) != (_second & 0xFE000000);
+		first.value += second;
+		return first;
 	}
 	public override bool Equals(object obj)
 	{
-		return (value & 0xFE000000).Equals(obj);
+		return (value & 0xFE000000) == (((TypeAmount)obj).value & 0xFE000000);
 	}
 	public override int GetHashCode()
 	{
-		return (value & 0xFE000000).GetHashCode();
+		return GetIndex().GetHashCode();
 	}
 
 }
 
 [Serializable]
-public class SaveData
+public class StageData
 {
 	[Serializable]
 	public struct SaveBuilding
@@ -887,7 +1038,7 @@ public class SaveData
 	//public uint[,] bitField;
 	public SaveBuilding[] saveBuildings;
 	public SaveTile[] saveTiles;
-	public SaveData()
+	public StageData()
 	{
 		//if (MCScript.bitField == null)
 		//{
@@ -913,82 +1064,118 @@ public class SaveData
 }
 
 [Serializable]
-public class SaveMoneyData
+public class SaveAboveData
 {
-	public ushort[] itemCosts;
-	public ushort[] items;
-	public int[] minerals;
+	public int smeltInd, craftIndex;
+	public int[] collectibles;
 	public float[] dailyMineralValues;
-	public uint upgrades;// bit field
-	public uint bagSize;
-	public float gold;
 	public System.DateTime currTime;
 	public List<int> highsAndLows;
-	public SaveMoneyData()
+	public System.DateTime smeltTime;
+	public System.DateTime craftTime;
+	public SaveAboveData()
 	{
+		smeltInd = craftIndex = -1;
 		currTime = System.DateTime.Now;
-		upgrades = CoppyScript.upgrade;
-		bagSize = PlayerScript.maxBagSize;
-		gold = 0f;
-		items = new ushort[MCScript.differentItemCount];
-		// TODO
-		// balance out costs
-		itemCosts = new ushort[] { 2, 2, 2, 2, 2, 2 };
-		minerals = new int[] {
-			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 // minerals
-			, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 // bars
-			, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }; // crafts
-		dailyMineralValues = new float[minerals.Length];
+		collectibles = new int[(int)MCScript.COLLECTIBLES.Total]; // items
+																  // initialize to -1 so we know if they have unlocked it or not
+		int i = -1; while (++i != (int)MCScript.COLLECTIBLES.Beam)
+		{
+			collectibles[i] = -1;
+		}
+		dailyMineralValues = new float[collectibles.Length];
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.MapPiece] = 2f;
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.Beam] = 2f;
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.Bridge] = 2f;
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.Teleporter] = 2f;
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.Marker] = 2f;
 		highsAndLows = RandomizeValues();
 	}
 	public List<int> RandomizeValues()
 	{
-		const int mineralMax = 32, barMax = 64, craftMax = 96;
-		int i = -1; while (++i != mineralMax)
+		int i = -1; while (++i != (int)MCScript.COLLECTIBLES.CopperBar)
 		{
 			dailyMineralValues[i] = Mathf.Pow(1f + UnityEngine.Random.Range(0f, .6f), i);
 		}
-		--i; while (++i != barMax)
+		--i; while (++i != (int)MCScript.COLLECTIBLES.Graphite)
 		{
 			dailyMineralValues[i] = 200f + Mathf.Pow(2.3f + UnityEngine.Random.Range(0f, .6f), i - 31);
 		}
-		--i; while (++i != craftMax)
+		--i; while (++i != (int)MCScript.COLLECTIBLES.Beam)
 		{
 			dailyMineralValues[i] = 20f + Mathf.Pow(1.5f + UnityEngine.Random.Range(0f, .6f), i - 61);
 		}
 
-		int highOutlier = UnityEngine.Random.Range(0, mineralMax), lowOutlier;
+		int highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.CopperBar), lowOutlier;
 		List<int> selectedHighLow = new List<int>(6);
 
 		// minerals
 		do
 		{
-			lowOutlier = UnityEngine.Random.Range(0, mineralMax);
+			lowOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.CopperBar);
 		} while (lowOutlier != highOutlier);
 		selectedHighLow.Add(highOutlier); selectedHighLow.Add(lowOutlier);
 		dailyMineralValues[highOutlier] *= UnityEngine.Random.Range(1.2f, 2.3f);
 		dailyMineralValues[lowOutlier] *= UnityEngine.Random.Range(.3f, .8f);
 
 		//bars
-		highOutlier = UnityEngine.Random.Range(0, barMax);
+		highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Graphite);
 		do
 		{
-			lowOutlier = UnityEngine.Random.Range(0, barMax);
+			lowOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Graphite);
 		} while (lowOutlier != highOutlier);
 		selectedHighLow.Add(highOutlier); selectedHighLow.Add(lowOutlier);
 		dailyMineralValues[highOutlier] *= UnityEngine.Random.Range(1.2f, 2.3f);
 		dailyMineralValues[lowOutlier] *= UnityEngine.Random.Range(.3f, .8f);
 
 		// crafts
-		highOutlier = UnityEngine.Random.Range(0, craftMax);
+		highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Beam);
 		do
 		{
-			lowOutlier = UnityEngine.Random.Range(0, craftMax);
+			lowOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Beam);
 		} while (lowOutlier != highOutlier);
 		selectedHighLow.Add(highOutlier); selectedHighLow.Add(lowOutlier);
 		dailyMineralValues[highOutlier] *= UnityEngine.Random.Range(1.2f, 2.3f);
 		dailyMineralValues[lowOutlier] *= UnityEngine.Random.Range(.3f, .8f);
 
 		return selectedHighLow;
+	}
+}
+
+[Serializable]
+public class SaveBothGroundData
+{
+	public uint upgrades,/* bit field */tutorial, /* increase as you hit the spot or skip */bagSize, currTrackedMineral;
+	public float gold;
+	public int depth;
+	public ulong[] missions;// double bitfield missions can be accomplished anywhere
+
+	public SaveBothGroundData()
+	{
+		bagSize = 50;
+		// TODO
+		// balance out costs
+		depth = -5;
+		missions = new ulong[2];
+		missions[0] = 1;
+		missions[1] = 1;
+	}
+}
+
+[Serializable]
+public class SaveBelowData
+{
+	public System.UInt64[] tiles;// giant bitfield
+	public SaveBelowData()
+	{
+		tiles = new ulong[1000];
+		tiles[0] = 0xFC00000000000000u;
+		tiles[1] = 0xFC00000000000000u;
+		tiles[2] = 0xFC00000000000000u;
+		tiles[3] = 0xFC00000000000000u;
+		tiles[4] = 0xFC00000000000000u;
+		tiles[5] = 0xFC00000000000000u;
+		tiles[6] = 0xFC00000000000000u;
+		tiles[7] = 0xFC00000000000000u;
 	}
 }

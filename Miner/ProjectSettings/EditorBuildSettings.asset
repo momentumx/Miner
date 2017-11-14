@@ -5,19 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/scenes/InitialScene.unity
-  - enabled: 0
-    path: Assets/scenes/Instructions.unity
-  - enabled: 0
-    path: Assets/scenes/MainMenu.unity
-  - enabled: 0
-    path: Assets/scenes/Spells&Enemies.unity
-  - enabled: 0
-    path: Assets/Scenes/credits.unity
-  - enabled: 0
-    path: Assets/Scenes/Level1.unity
-  - enabled: 0
-    path: Assets/Scenes/IntroScene.unity
+  - enabled: 1
+    path: Assets/Scenes/Intro.unity
+    guid: a22043c290659ed4b9adadd5a57bbbca
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 2a1ef59fbb082644e8c788df42751256
   - enabled: 1
     path: Assets/Scenes/Level0.unity
+    guid: eca67093059ae4b468fa09a7984ca2f0

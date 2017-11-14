@@ -260,7 +260,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: 1
+  m_Text: 
 --- !u!114 &114751366483370574
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -293,7 +293,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: Aluminum
+  m_Text: 
 --- !u!114 &114926582868952898
 MonoBehaviour:
   m_ObjectHideFlags: 1

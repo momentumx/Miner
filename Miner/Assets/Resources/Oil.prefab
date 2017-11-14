@@ -20,8 +20,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4835792628605972}
   - component: {fileID: 212515427302762938}
-  m_Layer: 0
-  m_Name: GameObject
+  m_Layer: 1
+  m_Name: Oil
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -36,13 +36,13 @@ GameObject:
   m_Component:
   - component: {fileID: 4477563976538182}
   - component: {fileID: 212836835251498786}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: Fade
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1962747289457826
 GameObject:
   m_ObjectHideFlags: 0
@@ -51,11 +51,10 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4147879427301888}
-  - component: {fileID: 95284759301535022}
-  - component: {fileID: 50207570070447956}
   - component: {fileID: 58621621187020450}
   - component: {fileID: 114213039635269914}
-  m_Layer: 0
+  - component: {fileID: 50718263943821082}
+  m_Layer: 1
   m_Name: Oil
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -69,7 +68,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1962747289457826}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 87.17841, y: 7.6, z: 0}
+  m_LocalPosition: {x: 3.864047, y: -1.9721017, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4835792628605972}
@@ -84,8 +83,8 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1602838985399496}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -18.4, z: 0}
-  m_LocalScale: {x: 0.060156234, y: 0.7374995, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4147879427301888}
   m_RootOrder: 1
@@ -98,12 +97,12 @@ Transform:
   m_GameObject: {fileID: 1372570643491644}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.76, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4147879427301888}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!50 &50207570070447956
+--- !u!50 &50718263943821082
 Rigidbody2D:
   serializedVersion: 4
   m_ObjectHideFlags: 1
@@ -117,12 +116,12 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDrag: 0
   m_AngularDrag: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 0
   m_Material: {fileID: 0}
   m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 0
-  m_Constraints: 4
+  m_Constraints: 5
 --- !u!58 &58621621187020450
 CircleCollider2D:
   m_ObjectHideFlags: 1
@@ -138,23 +137,6 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
   m_Radius: 0.45
---- !u!95 &95284759301535022
-Animator:
-  serializedVersion: 3
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1962747289457826}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 22100000, guid: 7287607b6c5b8854e9c716e0585d7c81, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
 --- !u!114 &114213039635269914
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -197,7 +179,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_Sprite: {fileID: 21300000, guid: 2efbd70e9c9b3b849a57e58eb821d1b4, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -240,8 +222,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300002, guid: 36d2eea9cd05d8f42b2b5e10e30e2527, type: 3}
-  m_Color: {r: 0, g: 0, b: 0, a: 0}
+  m_Sprite: {fileID: 21300000, guid: 8172f4e8842fc9b4585603f6b03da5c6, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

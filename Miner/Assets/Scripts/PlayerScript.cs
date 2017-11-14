@@ -1,13 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using UnityEngine;
 
 public class PlayerScript : MonoBehaviour
 {
 	public enum STATE { Normal, Digging, Celebrating, Dying, Breaking, Flying, WalkIn }
 	public STATE state = STATE.Flying;
-	int digDirection;
+	public int digDirection;
+	[SerializeField]
 	UnityEngine.UI.RawImage contrB, contrJ;
 	Rigidbody2D rigid;
 	Animator anim;
@@ -19,18 +19,17 @@ public class PlayerScript : MonoBehaviour
 	[SerializeField]
 	LayerMask tiles;
 	int animSpeedHash, animStateHash;
+	[SerializeField]
 	ParticleSystem dirtParticle, dropItem;
 	AudioSource audioS;
-	string notice;
-	bool gotItems;
 	public static sbyte drillStrength = 1;
-	static public uint maxBagSize;
 	static public List<TypeAmount> bag = new List<TypeAmount>();
 	static public ushort[] items = new ushort[MCScript.differentItemCount];
 
 	// Use this for initialization
 	void Start()
 	{
+		digDirection = -1;
 		audioS = GetComponent<AudioSource>();
 		var currTime = System.DateTime.Now;
 		dirtParticle = GameObject.Find("DirtExplosion").GetComponent<ParticleSystem>();
@@ -43,38 +42,23 @@ public class PlayerScript : MonoBehaviour
 		contrJ = GameObject.Find("knob").GetComponent<UnityEngine.UI.RawImage>();
 	}
 
-
 	// Update is called once per frame
 	void Update()
 	{
-		if (gotItems)
-		{
-			MCScript.txt.text = notice + dropItem.particleCount;
-			UnityEngine.UI.Text mineralText = GameObject.Find("MineralCountTxt").GetComponent<UnityEngine.UI.Text>();
-			mineralText.text = (int.Parse(mineralText.text) + dropItem.particleCount).ToString();
-			int match = bag.IndexOf((MCScript.TILE_VALUES)defender.value);
-			if (match == -1)
-			{
-				match = bag.Count;
-				bag.Add((MCScript.TILE_VALUES)defender.value);
-			}
-			bag[match] += (uint)dropItem.particleCount;
-			gotItems = false;
-		}
 		if (CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.UnderGround)
 		{
 			if (transform.position.y > 1.1f)
 			{
 				rigid.velocity = Vector2.zero;
 				rigid.gravityScale = 0f;
-				FindObjectOfType<CameraMovement>().GoVisit(3f);
-				ChangeStates(STATE.WalkIn);
-				ChangeControllerAlpha(0f);
-				audioS.Stop();
+				MCScript.cam.GoVisit(3f);
+				ChangeStates(STATE.WalkIn);// play the enter animation
+				ChangeControllerAlpha(0f);// the controller only works underground so we need to turn it off here
+				audioS.Stop();// stop the flame noise
+							  // make sure that we are facing to the right
 				Vector3 newScale = transform.localScale;
 				newScale.x = Mathf.Abs(transform.localScale.x);
 				transform.localScale = newScale;
-				MCScript.GoUp();
 				return;
 			}
 #if UNITY_EDITOR
@@ -82,14 +66,120 @@ public class PlayerScript : MonoBehaviour
 			{
 				if (Input.GetMouseButtonDown(0))
 				{
-					ChangeControllerAlpha(.4f);
+					ChangeControllerAlpha(.5f);
 					contrB.transform.position = Input.mousePosition;
+					contrJ.transform.position = Input.mousePosition;
 				}
 				else
 				{
-					Vector2 speed = Vector2.ClampMagnitude(Input.mousePosition - contrB.transform.position, 100f);
-					speed *= .01f;// bring it back to a value of 1
-					contrJ.transform.localPosition = speed * backImageRadius; // remove when we have actual image
+					// in screen space, 100 isnt even the size of the thumb. so the clamp must be at LEAST 100 so that the distance can be seen
+					// if we just clamp to 1, then the image jumps instantly, bc thats the equivalent of 1 pixel
+					Vector2 speed = Vector2.ClampMagnitude((Vector2)Input.mousePosition - (Vector2)contrB.transform.position, 100f);
+					speed *= .01f;// this brings the x & y back to a number between 0-1;
+					contrJ.transform.localPosition = speed * backImageRadius; // this allows us to scale the distance the joystick can travel without effecting the speed of everything else, remove th float when we have the actual image size
+					Vector3 scale = transform.localScale;
+					scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
+					transform.localScale = scale;
+					switch (state)
+					{
+						case STATE.Flying:
+						case STATE.Normal:
+
+							digDirection = StrongPush(speed);
+							if (CheckDig(digDirection))
+							{
+								CameraMovement.WorldPosToGridPos(transform);
+								ChangeStates(STATE.Digging);
+								rigid.velocity = Vector2.zero;
+								rigid.gravityScale = 0f;
+								//defender.gameObject.isStatic = false;
+								return;
+							}
+							if (speed.y > .2f)
+							{
+								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * .1f + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * .7f + rigid.velocity.y, maxSpeed));
+								ChangeStates(STATE.Flying);
+							}
+							else
+							{
+								speed.y = rigid.velocity.y;
+								anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
+								if (Physics2D.OverlapCircle(transform.position, .1f, tiles))
+								{
+									speed.x *= maxSpeed;
+								}
+								else
+								{
+									speed.x = speed.x * .1f + rigid.velocity.x;
+									if (speed.x > maxSpeed)
+									{
+										speed.x = maxSpeed;
+									}
+									else if (speed.x < -maxSpeed)
+									{
+										speed.x = -maxSpeed;
+									}
+								}
+								rigid.velocity = speed;
+								ChangeStates(STATE.Normal);
+							}
+							break;
+						case STATE.Digging:
+							anim.SetFloat(animSpeedHash, speed.y);
+							if (StrongPush(speed) != digDirection)
+							{
+								ChangeStates(STATE.Normal);
+								rigid.gravityScale = 1f;
+							}
+							break;
+						case STATE.Celebrating:
+							if (flame.activeSelf)
+							{
+								rigid.velocity = Vector2.zero;
+							}
+							break;
+						case STATE.Dying:
+							break;
+						case STATE.Breaking:
+							break;
+						default:
+							break;
+					}
+				}
+			}
+			else if (Input.GetMouseButtonUp(0))
+			{
+				if (state == STATE.Digging || state == STATE.Flying)
+				{
+					ChangeStates(STATE.Normal);
+					audioS.Stop();
+				}
+				rigid.gravityScale = 1f;
+				anim.SetFloat(animSpeedHash, 0f);
+			}
+			else
+			{
+				if (Physics2D.OverlapCircle(transform.position, .1f, tiles))
+					rigid.velocity = new Vector2(0f, rigid.velocity.y);
+				if (contrB.color.a != 0)
+				{
+					ChangeControllerAlpha(contrB.color.a - .6f);
+				}
+			}
+#else
+
+			if (Input.touchCount != 0)
+			{
+				if (Input.GetTouch(0).phase == TouchPhase.Began)
+				{
+					ChangeControllerAlpha(.5f);
+					contrB.transform.position = Input.mousePosition;
+				}
+				else if (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(0).phase == TouchPhase.Stationary)
+				{
+					Vector2 speed = Vector2.ClampMagnitude((Vector2)Input.mousePosition - (Vector2)contrB.transform.position, 100f);
+					speed *= .01f;// this brings the x & y back to a number between 0-1;
+					contrJ.transform.localPosition = speed * backImageRadius; // this allows us to scale the distance the joystick can travel without effecting the speed of everything else, remove th float when we have the actual image size
 					Vector3 scale = transform.localScale;
 					scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
 					transform.localScale = scale;
@@ -145,6 +235,10 @@ public class PlayerScript : MonoBehaviour
 							}
 							break;
 						case STATE.Celebrating:
+							if (flame.activeSelf)
+							{
+								rigid.velocity = Vector2.zero;
+							}
 							break;
 						case STATE.Dying:
 							break;
@@ -154,16 +248,16 @@ public class PlayerScript : MonoBehaviour
 							break;
 					}
 				}
-			}
-			else if (Input.GetMouseButtonUp(0))
-			{
-				if (state == STATE.Digging || state == STATE.Flying)
+				else
 				{
-					ChangeStates(STATE.Normal);
-					audioS.Stop();
+					if (state == STATE.Digging || state == STATE.Flying)
+					{
+						ChangeStates(STATE.Normal);
+						audioS.Stop();
+					}
+					rigid.gravityScale = 1f;
+					anim.SetFloat(animSpeedHash, 0f);
 				}
-				rigid.gravityScale = 1f;
-				anim.SetFloat(animSpeedHash, 0f);
 			}
 			else
 			{
@@ -174,78 +268,6 @@ public class PlayerScript : MonoBehaviour
 					ChangeControllerAlpha(contrB.color.a - .6f);
 				}
 			}
-
-#else
-
-		if ( Input.touchCount != 0 ) {
-			if ( Input.GetTouch ( 0 ).phase == TouchPhase.Began ) {
-				Color tempB = contrB.color;
-				Color tempJ = contrJ.color;
-				tempB.a = .4f;
-				tempJ.a = tempB.a;
-				contrB.color = tempB;
-				contrJ.color = tempJ;
-				contrB.transform.position = Input.mousePosition;
-			} else if ( Input.GetTouch ( 0 ).phase == TouchPhase.Moved || Input.GetTouch ( 0 ).phase == TouchPhase.Stationary ) {
-				Vector2 speed = Vector2.ClampMagnitude ( Input.mousePosition - contrB.transform.position, 100f );
-				contrJ.transform.localPosition = speed * backImageRadius * .01f; // remove when we have actual image
-				Vector3 scale = transform.localScale;
-				scale.x = Mathf.Sign ( speed.x ) * Mathf.Abs ( scale.x );
-				transform.localScale = scale;
-				switch ( state ) {
-					case STATE.Normal:
-						digDirection = StrongPush ( speed * .01f );
-						if ( CheckDig ( digDirection ) ) {
-							state = STATE.Digging;
-							rigid.velocity = Vector2.zero;
-							defender.gameObject.isStatic = false;
-							anim.SetTrigger ( "Attack" );
-							return;
-						}
-						if ( rigid.gravityScale == 0f ) {
-							rigid.velocity = speed * maxSpeed * .01f;
-						} else {
-							rigid.velocity = speed * maxSpeed * .01f + Physics2D.gravity;
-						}
-						anim.SetFloat ( animSpeedHash, Mathf.Abs ( rigid.velocity.x / ( maxSpeed) ) );
-						break;
-					case STATE.Digging:
-						anim.SetFloat ( animSpeedHash, speed.y * .01f );
-						if ( StrongPush ( speed * .01f ) != digDirection ) {
-							state = STATE.Normal;
-							anim.SetTrigger ( "Done" );
-						}
-						break;
-					case STATE.Celebrating:
-						break;
-					case STATE.Dying:
-						break;
-					case STATE.Breaking:
-						break;
-					default:
-						break;
-				}
-			} else {
-				if ( state == STATE.Digging ) {
-					state = STATE.Normal;
-					anim.SetTrigger ( "Done" );
-				}
-				anim.SetFloat ( animSpeedHash, 0f );
-			}
-		} else {
-			Vector2 speed = Vector2.zero;
-			if ( rigid.velocity.y < 0f && rigid.gravityScale == 1f )
-				speed.y = rigid.velocity.y;
-			rigid.velocity = speed;
-			if ( contrB.color.a != 0 ) {
-				Color tempB = contrB.color;
-				Color tempJ = contrJ.color;
-				tempB.a -= .06f;
-				tempJ.a = tempB.a;
-				contrB.color = tempB;
-				contrJ.color = tempJ;
-			}
-		}
 #endif
 		}
 	}
@@ -264,8 +286,11 @@ public class PlayerScript : MonoBehaviour
 		}
 		else
 		{
-			flame.SetActive(false);
-			audioS.Stop();
+			if (state != STATE.Celebrating)
+			{
+				flame.SetActive(false);
+				audioS.Stop();
+			}
 		}
 
 		anim.SetInteger(animStateHash, (int)state);
@@ -283,7 +308,11 @@ public class PlayerScript : MonoBehaviour
 
 	public void AttackTile()
 	{
-
+		CheckDig(digDirection);
+		if (defender == null)
+		{
+			return;
+		}
 		defender.hp -= drillStrength;
 		Transform defChild = defender.transform.GetChild(0), particlePositioner = transform.GetChild(0);
 		dirtParticle.transform.position = particlePositioner.position;
@@ -292,57 +321,101 @@ public class PlayerScript : MonoBehaviour
 		// dead
 		if (defender.hp < 1)
 		{
-			if (defender.value > (int)MCScript.TILE_VALUES.Treasure)//if it lays minerals
+			MCScript.TILE_VALUES tileValue = (MCScript.TILE_VALUES)defender.value;
+			if (tileValue > MCScript.TILE_VALUES.Treasure)//if it lays minerals
 			{
-				MCScript.txt.transform.position = Camera.main.WorldToScreenPoint(defender.transform.position);
-				MCScript.txt.color = defChild.GetChild(0).GetComponent<SpriteRenderer>().color;
-				dropItem.transform.position = defender.transform.position;
-				dropItem.Play();
-				var temp = dropItem.textureSheetAnimation;
-				temp.rowIndex = defender.value - (int)MCScript.TILE_VALUES.Coal;
+				int randomAmount = Random.Range(5, 16);
+				UnityEngine.UI.Text mineralText = GameObject.Find("MineralCountTxt").GetComponent<UnityEngine.UI.Text>();
+				int bagCount = int.Parse(System.Text.RegularExpressions.Regex.Match(mineralText.text, "\\d+").Value);
+				if (randomAmount + bagCount >= MCScript.savedBothData.bagSize)
+				{
+					MCScript.SetText("Bag Full\n" + (tileValue).ToString() + " +" + randomAmount, Color.red, Camera.main.WorldToScreenPoint(defender.transform.position));
+					randomAmount = (int)MCScript.savedBothData.bagSize - bagCount;
+				}
+				else
+				{
+					MCScript.SetText((tileValue).ToString() + " +" + randomAmount, defChild.GetChild(0).GetComponent<SpriteRenderer>().color, Camera.main.WorldToScreenPoint(defender.transform.position));
+				}
+				if (randomAmount > 0)
+				{
+					dropItem.transform.position = defender.transform.position;
+					dropItem.Emit(randomAmount);
+					mineralText.text = (bagCount + randomAmount).ToString() + '/' + MCScript.savedBothData.bagSize;
 
-				notice = ((MCScript.TILE_VALUES)defender.value).ToString() + " +";
-				gotItems = true;
+					uint index = (uint)(tileValue - MCScript.TILE_VALUES.Coal);
+					int match = bag.IndexOf(index);
+					if (match == -1)
+					{
+						bag.Add(new TypeAmount(index, (uint)randomAmount));
+					}
+					else
+					{
+						bag[match] += (uint)randomAmount;
+
+					}
+					var temp = dropItem.textureSheetAnimation;
+					temp.rowIndex = tileValue - MCScript.TILE_VALUES.Coal;
+				}
+				ChangeStates(STATE.Celebrating);
 			}
 			else
 			{
 				switch ((MCScript.TILE_VALUES)defender.value)
 				{
 					case MCScript.TILE_VALUES.Dirt:
-					case MCScript.TILE_VALUES.Stone:
+						ChangeStates(STATE.Normal);
 						break;
 					case MCScript.TILE_VALUES.Oil:
-						Instantiate(Resources.Load<GameObject>("Oil"),defender.transform.position,Quaternion.identity);
+						ChangeStates(STATE.Normal);
+						Instantiate(Resources.Load<GameObject>("Oil"), defender.transform.position, Quaternion.identity);
 						break;
 					case MCScript.TILE_VALUES.Artifact:
+						ChangeStates(STATE.Celebrating);
 						// add to artifacts
 						break;
 					case MCScript.TILE_VALUES.Map:
-						// add to maps
+						ChangeStates(STATE.Celebrating);
+						++items[3];
 						break;
 					case MCScript.TILE_VALUES.Treasure:
-						SaveMoneyData savedData = MCScript.GetSavedData();
-						savedData.gold += 10000f;
-						MCScript.SaveData(savedData);
-						MCScript.txt.transform.position = Camera.main.WorldToScreenPoint(defender.transform.position);
-						MCScript.txt.color = Color.yellow;
-						MCScript.txt.text = "Gold +$$$$10,0000";
+						MCScript.SetText("Gold +$$$$10,0000", Color.yellow, Camera.main.WorldToScreenPoint(defender.transform.position));
+						MCScript.ChangeGold(10000f);
+						ChangeStates(STATE.Celebrating);
 						break;
 					default:
 						break;
 				}
 			}
-			ChangeStates(STATE.Celebrating);
-			// check tile above and see if it is placed, and then check lowest undug tile and place it there
-			// {
-
-			// }
-			MCScript.PlayRandomDeath();
+			RaycastHit2D hitInfo = Physics2D.Raycast((Vector2)defender.transform.position + Vector2.up * 2f, Vector2.zero);
+			Tile upNeighbor;
+			while (hitInfo)
+			{
+				upNeighbor = hitInfo.collider.GetComponent<Tile>();
+				if (upNeighbor)
+				{
+					if ((MCScript.TILE_VALUES)upNeighbor.value == MCScript.TILE_VALUES.Stone)
+					{
+						if (!upNeighbor.GetComponent<Rigidbody2D>())
+						{
+							upNeighbor.gameObject.isStatic = false;
+							Rigidbody2D newBody = upNeighbor.gameObject.AddComponent<Rigidbody2D>();
+							newBody.freezeRotation = true;
+							newBody.mass = 100f;
+						}
+					}
+					hitInfo = Physics2D.Raycast((Vector2)upNeighbor.transform.position + Vector2.up * 2f, Vector2.zero);
+				}
+				else
+				{
+					break;
+				}
+			}
+			PersistentManager.PlayRandomDeath();
 			rigid.gravityScale = 1f;
 			Destroy(defender.gameObject);
 			return;
 		}
-		MCScript.PlayRandomAttack();
+		PersistentManager.PlayRandomAttack();
 		int fullHp = MCScript.FullHpForDepth(defender.transform.position.y);
 		// set the offset for the crack
 		Vector2 offSet = new Vector2(0f, .5f);
@@ -410,7 +483,7 @@ public class PlayerScript : MonoBehaviour
 
 	public void FinishCelebrating()
 	{
-		ChangeStates( STATE.Normal);
+		ChangeStates(STATE.Normal);
 	}
 
 	//int AngleOfHit_90s(Vector2 _dir)
@@ -450,7 +523,7 @@ public class PlayerScript : MonoBehaviour
 		return -1;
 	}
 
-	public bool GetTile(float _x, float _y)
+	bool GetTile(float _x, float _y)
 	{
 
 		Vector2 hitPoint = transform.position;
@@ -460,12 +533,9 @@ public class PlayerScript : MonoBehaviour
 		Collider2D hitCollider = Physics2D.OverlapPoint(hitPoint, tiles);
 		if (hitCollider)
 		{
-			Tile temp = hitCollider.GetComponent<Tile>();
-			if (temp.value != (byte)MCScript.TILE_VALUES.Stone)
-			{
-				defender = temp;
-				return true;
-			}
+			// guaranteed to have a tile script bc of layermask
+			defender = hitCollider.GetComponent<Tile>();
+			return true;
 		}
 		defender = null;
 		return false;

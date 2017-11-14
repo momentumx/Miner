@@ -5,12 +5,11 @@ public class Tile : MonoBehaviour  {
 
 	public byte value, state;
 	public sbyte hp;
-
-	[SerializeField]
-	Color jewelColor;
-
 	SpriteRenderer jewel;
 
+	// this all needs to be removed when we have final colors
+	[SerializeField]
+	Color jewelColor;
 	void Update () {
 		if(jewel)
 		jewel.color = jewelColor;
@@ -42,6 +41,10 @@ public class Tile : MonoBehaviour  {
 			MCScript.TILE_GEMTYPES gemType;
 			switch ((MCScript.TILE_VALUES)value)
 			{
+				case MCScript.TILE_VALUES.Stone:
+					gemType = MCScript.TILE_GEMTYPES.Single;
+					gameObject.layer = LayerMask.NameToLayer("Stone");
+					break;
 				case MCScript.TILE_VALUES.Coal:
 				case MCScript.TILE_VALUES.Copper:
 				case MCScript.TILE_VALUES.Nickel:
@@ -66,7 +69,7 @@ public class Tile : MonoBehaviour  {
 				case MCScript.TILE_VALUES.Azurite:
 					gemType = MCScript.TILE_GEMTYPES.Heart;
 					break;
-				case MCScript.TILE_VALUES.Amythyst:
+				case MCScript.TILE_VALUES.Amethyst:
 					gemType = MCScript.TILE_GEMTYPES.Leaf;
 					break;
 				case MCScript.TILE_VALUES.Onyx:
@@ -96,7 +99,7 @@ public class Tile : MonoBehaviour  {
 					break;
 				default:
 					temp.rotation = Quaternion.AngleAxis(90 * UnityEngine.Random.Range(0, 4), Vector3.forward);
-					jewel.sprite = Resources.LoadAll<Sprite>("Minerals/" + ((MCScript.TILE_GEMTYPES)gemType).ToString())[maxRandomSprites];
+					jewel.sprite = Resources.LoadAll<Sprite>("Minerals/" + (gemType).ToString())[maxRandomSprites];
 					break;
 			}
 
@@ -142,7 +145,7 @@ public class Tile : MonoBehaviour  {
 				case MCScript.TILE_VALUES.Azurite:
 					jewel.color = Color.blue;
 					break;
-				case MCScript.TILE_VALUES.Amythyst:
+				case MCScript.TILE_VALUES.Amethyst:
 					jewel.color = Color.magenta;
 					break;
 				case MCScript.TILE_VALUES.Onyx:
