@@ -5,13 +5,14 @@ public class DmgTextScript : MonoBehaviour {
 	UnityEngine.UI.Text txt;
 
 	void FixedUpdate () {
-		Vector2 upDir = transform.position;
-		++upDir.y;
-		transform.position = upDir;
+		
 		if ( txt.color.a != 0 ) {
 			Color temp = txt.color;
 			temp.a -= .003f;
 			txt.color = temp;
+			Vector2 upDir = transform.position;
+			++upDir.y;
+			transform.position = upDir;
 		}
 	}
 }

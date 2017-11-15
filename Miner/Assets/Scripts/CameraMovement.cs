@@ -8,15 +8,16 @@ public class CameraMovement : MonoBehaviour
 	public static CAMERA_MODE cameraMode = 0;
 	public static CAMERA_MODE oldMode = 0;
 
-	Transform target;
+	PlayerScript target;
 	Vector2 lastPos, speed;
 	const float acc = .93f;
 	public float width;
 	public GameObject upperMenu;
 
+
 	void Start()
 	{
-		target = GameObject.Find("PlayerParent").transform;
+		target = FindObjectOfType<PlayerScript>();
 	}
 
 	void FixedUpdate()
@@ -53,7 +54,7 @@ public class CameraMovement : MonoBehaviour
 					transform.position = new Vector3(3f, transform.position.y);
 				break;
 			case CAMERA_MODE.UnderGround:
-				transform.position += (Vector3)(((Vector2)target.position - (Vector2)transform.position) * .04f);
+				transform.position += (Vector3)(((Vector2)target.transform.position - (Vector2)transform.position) * .04f);
 				// turn position into bitfield space
 				// x = (int)transform.position / 200; y = 
 				// find closest bits on grid
@@ -91,19 +92,27 @@ public class CameraMovement : MonoBehaviour
 		Camera.main.orthographicSize -= Input.GetAxis("WheelZoom") * .03f;
 	}
 
+	// called from animator after the transition
+	public void Up()
+	{
+		cameraMode = CAMERA_MODE.Transition;
+		oldMode = CAMERA_MODE.Above;
+		MCScript.mcScript.GoUp();
+	}
+
 	// Used when we are actually going up
 	public void GoVisit(float _x)
 	{
-		target.position = new Vector2(.3f, 2.45f);
+		target.transform.position = new Vector2(.3f, 2.45f);
 		bool goingDown = transform.position.y == 1f;
 		if (goingDown)
 		{
-			target.GetComponent<PlayerScript>().ChangeStates(PlayerScript.STATE.Normal);
+			target.ChangeStates(PlayerScript.STATE.Normal);
 			target.GetComponent<Rigidbody2D>().gravityScale = 0f;
 		}
 		else
 		{
-			target.GetComponent<PlayerScript>().ChangeStates(PlayerScript.STATE.WalkIn);
+			target.ChangeStates(PlayerScript.STATE.WalkIn);
 			upperMenu.SetActive(true);
 		}
 		GoView(_x, goingDown);
@@ -145,6 +154,29 @@ public class CameraMovement : MonoBehaviour
 	static public void Lose()
 	{
 
+	}
+
+	static public void WorldPosToGridPos(Transform _worldMatrix)
+	{
+		int bit = Mathf.Max(0,((int)_worldMatrix.position.x) / (/*TileWidth*/2) - 4/*width*/)-1;
+		int yStartIndex = Mathf.Max(0, ((int)_worldMatrix.position.y) / -2 - 4/*height*/)-1;// dont forget y is going down
+		SaveBelowData savedBelow = MCScript.SavedBelowData;
+		int yEndIndex = Mathf.Min(savedBelow.tiles.Length, yStartIndex +11/*height*2 + 1*/);
+		int y;
+		Vector2 gridPos;
+		int x = Mathf.Min(64, bit + 9/*width*2+1*/); while (--x != bit)
+		{
+			y = yStartIndex; while (++y != yEndIndex)
+			{
+				if ((savedBelow.tiles[y]&(0x8000000000000000u >> x)) ==0)
+				{
+					savedBelow.tiles[y] |= (0x8000000000000000u >> x);
+					gridPos.x = 2u * x;// 2 is the size of the objects (200 pixles, and the world is set to 100 pixels per unit)
+					gridPos.y = -2u * y;
+					MCScript.CreateTile(gridPos, y);
+				}
+			}
+		}
 	}
 
 	public IEnumerator MoveToPos(float _x, bool _goingDown)

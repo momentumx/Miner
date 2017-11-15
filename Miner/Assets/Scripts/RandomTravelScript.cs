@@ -4,39 +4,69 @@ using UnityEngine;
 
 public class RandomTravelScript : MonoBehaviour
 {
-
-	public Vector2 direction, aim, velocity;
-	float timer, acc;
+	[HideInInspector]
+	public Transform aim;
+	[HideInInspector]
+	public Vector2 direction, offSet, velocity;
+	[HideInInspector]
+	public uint timer;
+	[SerializeField]
+	float moveSpeed, lirpSpeed, speedInc, lirpInc;
 
 	// Use this for initialization
 	public void Start()
 	{
-		velocity = new Vector2(Random.Range(0, 1f), Random.Range(0, -1f)).normalized * .2f;
-		timer = Time.time + .1f;
+		InvokeRepeating("SetRandomPos", 0f, .04f);
+		direction = Camera.main.ViewportToWorldPoint(new Vector3(Random.Range(.22f, .78f), Random.Range(.1f, .78f)));
+		velocity = (direction - (Vector2)transform.position).normalized * .3f;
 	}
 
 	public void FixedUpdate()
 	{
-		if (acc > .01f)
+		if (aim)
 		{
-			acc += .01f;
-			if (acc > .9f)
-				acc = .9f;
-			direction = (aim - (Vector2)transform.position).normalized * .3f;
+			if (timer != 0u)
+			{
+				timer -= 1u;
+				if (timer == 0u)
+				{
+					CancelInvoke("SetRandomPos");
+					direction = (Vector2)aim.position + offSet;
+				}
+				velocity = Vector2.Lerp(velocity, (direction - (Vector2)transform.position).normalized * moveSpeed, lirpSpeed);
+				transform.position += (Vector3)(velocity.normalized * moveSpeed);
+			}
+			else
+			{
+				if (Vector2.SqrMagnitude(direction - (Vector2)transform.position) < moveSpeed)
+				{
+					var rend = GetComponent<ParticleSystem>().main;
+					transform.position = aim.position + (Vector3)offSet;
+					Color blend = rend.startColor.color;
+					blend.a -= .01f;
+					if (blend.a < .01f)
+					{
+						Destroy(gameObject);
+					}
+					rend.startColor = blend;
+				}
+				else
+				{
+					velocity = Vector2.Lerp(velocity, (direction - (Vector2)transform.position).normalized * moveSpeed, lirpSpeed);
+					transform.position += (Vector3)(velocity.normalized * moveSpeed);
+				}
+			}
 		}
 		else
 		{
-			if (Time.time > timer)
-			{
-				direction = new Vector2(Random.Range(-1f, 1f), Random.Range(0, 1f)).normalized * .2f;
-				timer = Time.time + .1f;
-				acc += .001f;
-			}
-
+			Destroy(gameObject);
 		}
-		velocity += (direction - velocity) * (.1f + acc);
+	}
 
-		transform.position += (Vector3)velocity;
-
+	void SetRandomPos()
+	{
+		direction = Camera.main.ViewportToWorldPoint(new Vector3(Random.Range(.22f, .78f), Random.Range(.1f, .78f)));
+		moveSpeed += speedInc;
+		lirpSpeed += lirpInc;
 	}
 }
