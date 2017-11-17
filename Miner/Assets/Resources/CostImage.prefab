@@ -37,7 +37,7 @@ GameObject:
   m_Component:
   - component: {fileID: 224947100196036052}
   - component: {fileID: 222057930831042946}
-  - component: {fileID: 114518362203541672}
+  - component: {fileID: 114597112058542210}
   m_Layer: 5
   m_Name: CostImage
   m_TagString: Untagged
@@ -78,7 +78,7 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 0.2
   m_Text: 1/2
---- !u!114 &114518362203541672
+--- !u!114 &114597112058542210
 MonoBehaviour:
   m_ObjectHideFlags: 1
   m_PrefabParentObject: {fileID: 0}
@@ -86,7 +86,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1877230104077358}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: -98529514, guid: f70555f144d8491a825f0804e09c671c, type: 3}
+  m_Script: {fileID: -765806418, guid: f70555f144d8491a825f0804e09c671c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
@@ -97,13 +97,14 @@ MonoBehaviour:
       m_Calls: []
     m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_Texture: {fileID: 2800000, guid: d0412de4d5755bd43b294256c857ea74, type: 3}
-  m_UVRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
 --- !u!222 &222057930831042946
 CanvasRenderer:
   m_ObjectHideFlags: 1
@@ -142,7 +143,7 @@ RectTransform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1686599671217424}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -49.999893, y: -140.8, z: 0}
   m_LocalScale: {x: 0.8622557, y: 1.179229, z: 1}
   m_Children: []
   m_Father: {fileID: 224947100196036052}

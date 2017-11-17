@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DisableScript : MonoBehaviour {
+public class DisableScript : MonoBehaviour
+{
 	private void OnDisable()
 	{
-		Destroy(transform.GetChild(0).gameObject);
+		if (transform.childCount != 0)
+			Destroy(transform.GetChild(0).gameObject);
 	}
 }

@@ -17,7 +17,7 @@ public class PlayerScript : MonoBehaviour
 	float maxSpeed = .4f, backImageRadius = .185f;
 	Tile defender;
 	[SerializeField]
-	LayerMask tiles;
+	LayerMask tiles, ground;
 	int animSpeedHash, animStateHash;
 	[SerializeField]
 	ParticleSystem dirtParticle, dropItem;
@@ -25,6 +25,7 @@ public class PlayerScript : MonoBehaviour
 	public static sbyte drillStrength = 1;
 	static public List<TypeAmount> bag = new List<TypeAmount>();
 	static public ushort[] items = new ushort[MCScript.differentItemCount];
+
 
 	// Use this for initialization
 	void Start()
@@ -51,7 +52,7 @@ public class PlayerScript : MonoBehaviour
 			{
 				rigid.velocity = Vector2.zero;
 				rigid.gravityScale = 0f;
-				MCScript.cam.GoVisit(3f);
+				CameraMovement.cam.GoVisit(3f);
 				ChangeStates(STATE.WalkIn);// play the enter animation
 				ChangeControllerAlpha(0f);// the controller only works underground so we need to turn it off here
 				audioS.Stop();// stop the flame noise
@@ -88,7 +89,7 @@ public class PlayerScript : MonoBehaviour
 							digDirection = StrongPush(speed);
 							if (CheckDig(digDirection))
 							{
-								CameraMovement.WorldPosToGridPos(transform);
+								CreatStuff();
 								ChangeStates(STATE.Digging);
 								rigid.velocity = Vector2.zero;
 								rigid.gravityScale = 0f;
@@ -104,7 +105,7 @@ public class PlayerScript : MonoBehaviour
 							{
 								speed.y = rigid.velocity.y;
 								anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
-								if (Physics2D.OverlapCircle(transform.position, .1f, tiles))
+								if (Physics2D.OverlapCircle(transform.position, .1f, ground))
 								{
 									speed.x *= maxSpeed;
 								}
@@ -159,7 +160,7 @@ public class PlayerScript : MonoBehaviour
 			}
 			else
 			{
-				if (Physics2D.OverlapCircle(transform.position, .1f, tiles))
+				if (Physics2D.OverlapCircle(transform.position, .1f, ground))
 					rigid.velocity = new Vector2(0f, rigid.velocity.y);
 				if (contrB.color.a != 0)
 				{
@@ -191,6 +192,7 @@ public class PlayerScript : MonoBehaviour
 							digDirection = StrongPush(speed);
 							if (CheckDig(digDirection))
 							{
+								CreatStuff();
 								ChangeStates(STATE.Digging);
 								rigid.velocity = Vector2.zero;
 								rigid.gravityScale = 0f;
@@ -206,7 +208,7 @@ public class PlayerScript : MonoBehaviour
 							{
 								speed.y = rigid.velocity.y;
 								anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
-								if (Physics2D.OverlapCircle(transform.position, .1f, tiles))
+								if (Physics2D.OverlapCircle(transform.position, .1f, ground))
 								{
 									speed.x *= maxSpeed;
 								}
@@ -261,7 +263,7 @@ public class PlayerScript : MonoBehaviour
 			}
 			else
 			{
-				if (Physics2D.OverlapCircle(transform.position, .1f, tiles))
+				if (Physics2D.OverlapCircle(transform.position, .1f, ground))
 					rigid.velocity = new Vector2(0f, rigid.velocity.y);
 				if (contrB.color.a != 0)
 				{
@@ -279,7 +281,7 @@ public class PlayerScript : MonoBehaviour
 			return;
 		}
 		state = _state;
-		if (state == STATE.Flying || (state == STATE.Digging && !Physics2D.OverlapCircle(transform.position, .1f, tiles)))
+		if (state == STATE.Flying || (state == STATE.Digging && !Physics2D.OverlapCircle(transform.position, .1f, ground)))
 		{
 			flame.SetActive(true);
 			audioS.Play();
@@ -329,8 +331,8 @@ public class PlayerScript : MonoBehaviour
 				int bagCount = int.Parse(System.Text.RegularExpressions.Regex.Match(mineralText.text, "\\d+").Value);
 				if (randomAmount + bagCount >= MCScript.savedBothData.bagSize)
 				{
-					MCScript.SetText("Bag Full\n" + (tileValue).ToString() + " +" + randomAmount, Color.red, Camera.main.WorldToScreenPoint(defender.transform.position));
 					randomAmount = (int)MCScript.savedBothData.bagSize - bagCount;
+					MCScript.SetText("Bag Full\n" + (tileValue).ToString() + " +" + randomAmount, Color.red, Camera.main.WorldToScreenPoint(defender.transform.position));
 				}
 				else
 				{
@@ -558,6 +560,61 @@ public class PlayerScript : MonoBehaviour
 				return GetTile(-.5f, .63f);
 			default:
 				return false;
+		}
+	}
+
+	public void CreatStuff()
+	{
+
+		int gridEndPos = Mathf.Max(0, ((int)(transform.position.x) >> 1) - 4/*width*/);
+		int section = gridEndPos / 32;
+		if (section < 3)
+		{
+			uint bitShift;
+			int y, offset;
+			int shiftAmount = gridEndPos % 32 - 1;
+			int x = Mathf.Min(32, shiftAmount + 9);
+			int yStartIndex = Mathf.Max(-1, ((int)transform.position.y) / -2 - 4/*we only need to go up a little bc the camera is low*/);
+			int yEndIndex = Mathf.Min(999, yStartIndex + 11/*height*2 + 1*/);
+			SaveBelowData savedBelow = MCScript.SavedBelowData;
+			Vector2 gridPos;
+
+			offset = 64 * section;
+			while (--x != shiftAmount)
+			{
+				bitShift = ((0x80000000) >> x);
+				y = yStartIndex; while (++y != yEndIndex)
+				{
+					if ((savedBelow.tiles[section, y] & bitShift) == 0)
+					{
+						savedBelow.tiles[section, y] |= bitShift;
+						gridPos.x = 2 * x + offset;// 2 is the size of the objects (200 pixles, and the world is set to 100 pixels per unit)
+						gridPos.y = -2 * y;
+						MCScript.CreateTile(gridPos, y);
+					}
+				}
+			}
+			if (shiftAmount > 23 && section < 2)
+			{
+				++section;
+				x = -1;
+				shiftAmount -= 23;
+				offset = 64 * section;
+				while (++x != shiftAmount)
+				{
+					bitShift = ((0x80000000) >> x);
+					y = yStartIndex; while (++y != yEndIndex)
+					{
+						if ((savedBelow.tiles[section, y] & bitShift) == 0)
+						{
+							savedBelow.tiles[section, y] |= bitShift;
+							gridPos.x = 2 * x + offset;
+							gridPos.y = -2 * y;
+							MCScript.CreateTile(gridPos, y);
+						}
+					}
+				}
+			}
 		}
 	}
 

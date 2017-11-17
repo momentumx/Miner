@@ -9,7 +9,7 @@ public class CraftingScript : MonoBehaviour
 	public System.DateTime lastAccessed;
 	TypeAmount[] amounts;
 	[HideInInspector]
-	public int index = -1;
+	public int index;
 	[SerializeField]
 	RectTransform bar;
 	[SerializeField]
@@ -61,7 +61,7 @@ public class CraftingScript : MonoBehaviour
 
 	public void SetCraft(Transform _buyButton)
 	{
-		int lIndex = int.Parse(System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<UnityEngine.UI.RawImage>().texture.name, "\\d+").Value);
+		int lIndex = int.Parse(System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<UnityEngine.UI.Image>().sprite.name, "\\d+").Value);
 		if (lIndex == index)
 		{
 			Unattach();
@@ -84,7 +84,7 @@ public class CraftingScript : MonoBehaviour
 		{
 			Transform costImage = _buyButton.GetChild(i);
 			amounts[i - 4] = (new TypeAmount
-				(uint.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetComponent<UnityEngine.UI.RawImage>().texture.name, "\\d+").Value)
+				(uint.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetComponent<UnityEngine.UI.Image>().sprite.name, "\\d+").Value)
 				, uint.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetChild(0).GetComponent<UnityEngine.UI.Text>().text, "\\d+").Value)));
 		}
 		gameObject.SetActive(true);
@@ -103,6 +103,7 @@ public class CraftingScript : MonoBehaviour
 			else
 			{
 				currTime = 0f;
+				FixedUpdate();
 			}
 		}
 	}

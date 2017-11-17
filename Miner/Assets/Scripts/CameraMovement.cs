@@ -13,10 +13,11 @@ public class CameraMovement : MonoBehaviour
 	const float acc = .93f;
 	public float width;
 	public GameObject upperMenu;
-
+	static public CameraMovement cam;
 
 	void Start()
 	{
+		cam = GetComponent<CameraMovement>();
 		target = FindObjectOfType<PlayerScript>();
 	}
 
@@ -154,29 +155,6 @@ public class CameraMovement : MonoBehaviour
 	static public void Lose()
 	{
 
-	}
-
-	static public void WorldPosToGridPos(Transform _worldMatrix)
-	{
-		int bit = Mathf.Max(0,((int)_worldMatrix.position.x) / (/*TileWidth*/2) - 4/*width*/)-1;
-		int yStartIndex = Mathf.Max(0, ((int)_worldMatrix.position.y) / -2 - 4/*height*/)-1;// dont forget y is going down
-		SaveBelowData savedBelow = MCScript.SavedBelowData;
-		int yEndIndex = Mathf.Min(savedBelow.tiles.Length, yStartIndex +11/*height*2 + 1*/);
-		int y;
-		Vector2 gridPos;
-		int x = Mathf.Min(64, bit + 9/*width*2+1*/); while (--x != bit)
-		{
-			y = yStartIndex; while (++y != yEndIndex)
-			{
-				if ((savedBelow.tiles[y]&(0x8000000000000000u >> x)) ==0)
-				{
-					savedBelow.tiles[y] |= (0x8000000000000000u >> x);
-					gridPos.x = 2u * x;// 2 is the size of the objects (200 pixles, and the world is set to 100 pixels per unit)
-					gridPos.y = -2u * y;
-					MCScript.CreateTile(gridPos, y);
-				}
-			}
-		}
 	}
 
 	public IEnumerator MoveToPos(float _x, bool _goingDown)
