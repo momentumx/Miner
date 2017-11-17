@@ -19,7 +19,7 @@ public class MCScript : MonoBehaviour
 	public enum TILE_VALUES
 	{
 		Dirt, Stone, Oil, Artifact, Map, Treasure, Coal, Copper, Nickel, Opal, Zinc, Iron, Tin, Aluminum, Amethyst, Silver, Gold, Ruby, Emerald
-			, Azurite, Onyx, Pearl, Chromium, Sapphire, Topaz, Titanium, Diamond, Platinum, Kryptonium, Plutonium, Marsinium,
+			, Azurite, Onyx, Pearl, Chromium, Sapphire, Topaz, Titanium, Diamond, Platinum, Kryptonium, Plutonium, Rubber, Marsinium,
 
 		Total
 	}
@@ -41,7 +41,7 @@ public class MCScript : MonoBehaviour
 			, Beam, Bridge, Marker, MapPiece, Teleporter
 
 			// unfindables
-			, Rubber, Artifact1,
+			, Artifact1,
 
 		Total
 	}
@@ -77,7 +77,6 @@ public class MCScript : MonoBehaviour
 	static SaveBelowData savedBelowData;
 	static SaveAboveData savedAboveData;
 	static public MCScript mcScript;
-	static public CameraMovement cam;
 	public CraftingScript smelt, craft;
 
 	void Awake()
@@ -89,7 +88,6 @@ public class MCScript : MonoBehaviour
 
 		//UnityEngine.SceneManagement.SceneManager.LoadScene ( "MainMenu" );
 		mcScript = this;
-		cam = FindObjectOfType<CameraMovement>();
 		PersistentManager.mmScript.SwitchMusic(PersistentManager.MUSIC_CLIP.DayTime);
 		PersistentManager.SetAllAudioSources();
 		LoadStage();
@@ -218,17 +216,17 @@ public class MCScript : MonoBehaviour
 		content.anchorMax = Vector2.up;
 		content.anchoredPosition = Vector2.zero;
 		Sprite[] collectibles = Resources.LoadAll<Sprite>("Collectibles");
-		GameObject mineralDisplay;
+		GameObject mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
 		int i, finish, offset;
 		// TODO:
 		// adapt the menu for each type
+		Transform tab = mainMenu.Find("Tabs");
 
 		switch (menuType)
 		{
 			case MENUTYPE.Minerals:
 			case MENUTYPE.Bars:
 			case MENUTYPE.Crafts:
-				mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
 				// turn on the rest of the menu
 				mainMenu.GetChild(6).gameObject.SetActive(true);
 				mainMenu.GetChild(2).gameObject.SetActive(true);
@@ -238,7 +236,6 @@ public class MCScript : MonoBehaviour
 				mainMenu.GetChild(7).gameObject.SetActive(false);
 				mainMenu.GetChild(8).gameObject.SetActive(false);
 				mainMenu.GetChild(9).gameObject.SetActive(false);
-				Transform tab = mainMenu.Find("Tabs");
 				switch (menuType)
 				{
 					case MENUTYPE.Bars:
@@ -281,17 +278,16 @@ public class MCScript : MonoBehaviour
 				}
 				break;
 			case MENUTYPE.Bag:
-				mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
 				// turn off the rest of the menu
 				mainMenu.GetChild(6).gameObject.SetActive(false);
 				mainMenu.GetChild(2).gameObject.SetActive(false);
 				mainMenu.GetChild(3).gameObject.SetActive(false);
 				mainMenu.GetChild(4).gameObject.SetActive(false);
 				mainMenu.GetChild(5).gameObject.SetActive(false);
-				mainMenu.GetChild(8).gameObject.SetActive(true);
-				mainMenu.GetChild(9).gameObject.SetActive(true);
-				// load the bag in order they were received
-				// this helps finding the item the user just got bc it will be at the end of the list
+				mainMenu.GetChild(8).gameObject.SetActive(true);// items button
+				mainMenu.GetChild(9).gameObject.SetActive(true);// bag tab
+																// load the bag in order they were received
+																// this helps finding the item the user just got bc it will be at the end of the list
 				i = -1; while (++i != PlayerScript.bag.Count)
 				{
 					int mineralIndex = (int)PlayerScript.bag[i].GetIndex();
@@ -299,32 +295,59 @@ public class MCScript : MonoBehaviour
 					Sprite newImage = collectibles[mineralIndex];
 					newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = newImage;
 					newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.bag[i].GetAmount().ToString();
-					newItem.GetChild(2).GetComponent<Text>().text = System.Text.RegularExpressions.Regex.Match(newImage.name, "\\D+").Value;
+					newItem.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)mineralIndex).ToString();
 					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
 				}
-				mainMenu.GetChild(7).gameObject.SetActive(i == 0 ? true : false);
+				mainMenu.GetChild(7).gameObject.SetActive(i == 0 ? true : false);// empty text
 
 				break;
 			case MENUTYPE.Shop:
-			case MENUTYPE.Items:
-				mineralDisplay = Resources.Load<GameObject>("MineralDisplay");
+				ChangeTabColor(tab.GetChild(3));
 				i = (int)COLLECTIBLES.UltimateWeapon;
-				finish = (int)COLLECTIBLES.Total;
+				offset = i + 1;
+				finish = (int)COLLECTIBLES.Artifact1;
 				while (++i != finish)
 				{
-					int mineralIndex = (int)PlayerScript.bag[i].GetIndex();
 					Transform newItem = Instantiate(mineralDisplay, content).transform;
-					Sprite newImage = collectibles[mineralIndex];
-					newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = newImage;
-					newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.bag[i].GetAmount().ToString();
-					newItem.GetChild(2).GetComponent<Text>().text = System.Text.RegularExpressions.Regex.Match(newImage.name, "\\D+").Value;
-					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
+					Button.ButtonClickedEvent newEvent = newItem.GetComponent<Button>().onClick;
+					int passedByRef = i;
+					newEvent.AddListener(() => SellMineralMenu(passedByRef));
+					newEvent.AddListener(() => SetSellImage(newItem));
+					newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i];
+					newItem.GetChild(1).GetComponent<Text>().text = savedAboveData.collectibles[i].ToString();
+					newItem.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)i).ToString();
+					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + ((i - offset) % 3) * 194, -8 - 304 * ((i - offset) / 3));
+				}
+				break;
+			case MENUTYPE.Items:
+				i = -1;
+				finish = (int)differentItemCount;
+				while (++i != finish)
+				{
+					if (PlayerScript.items[i] != 0)
+					{
+						Transform newItem = Instantiate(mineralDisplay, content).transform;
+						if (CameraMovement.oldMode == CameraMovement.CAMERA_MODE.UnderGround)
+						{
+							int passedByRef = i;
+							newItem.GetComponent<Button>().onClick.AddListener(() => ItemUsed(passedByRef));
+						}
+						newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i + (int)COLLECTIBLES.Beam];
+						newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.items[i].ToString();
+						newItem.GetChild(2).GetComponent<Text>().text = (i + COLLECTIBLES.Beam).ToString();
+						((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
+					}
 				}
 				break;
 			default:
 				break;
 		}
+	}
 
+	public void ItemUsed(int _itemIndex)
+	{
+		menu.Find("MainMenu").gameObject.SetActive(false);
+		--PlayerScript.items[_itemIndex - (int)COLLECTIBLES.Beam];
 	}
 
 	public void GoUp()
@@ -456,14 +479,14 @@ public class MCScript : MonoBehaviour
 				break;
 			case FUNCTIONCALL.UpgradeMenu:
 				menu.Find("Upgrade_Menu").gameObject.SetActive(true);
-				cam.SetCameraMode((int)CameraMovement.CAMERA_MODE.Transition);
+				CameraMovement.cam.SetCameraMode((int)CameraMovement.CAMERA_MODE.Transition);
 				menuPressed(false);
 				// todo :
 				// turn interactable = false if we cant buy it
 				break;
 			case FUNCTIONCALL.ShopMenu:
 				menu.Find("Shop").gameObject.SetActive(true);
-				cam.SetCameraMode((int)CameraMovement.CAMERA_MODE.Transition);
+				CameraMovement.cam.SetCameraMode((int)CameraMovement.CAMERA_MODE.Transition);
 				menuPressed(false);
 				// todo :
 				// turn interactable = false if we cant buy it
@@ -604,9 +627,9 @@ public class MCScript : MonoBehaviour
 		Tile newTile = Instantiate(cloneTile, _pos, Quaternion.AngleAxis(90 * UnityEngine.Random.Range(0, 4), Vector3.forward)).GetComponent<Tile>();
 		newTile.hp = (sbyte)FullHpForDepth(_pos.y);
 		int chance = UnityEngine.Random.Range(0, 500);
-		if (chance < 330)
+		if (chance < 250)
 			newTile.value = (byte)TILE_VALUES.Dirt;
-		else if (chance < 337)
+		else if (chance < 290)
 			newTile.value = (byte)TILE_VALUES.Stone;
 		else if (chance < 340)
 			newTile.value = (byte)TILE_VALUES.Oil;
@@ -624,7 +647,7 @@ public class MCScript : MonoBehaviour
 		Vector2 gridPos;
 		uint x = uint.MaxValue; while (++x != maxWidth)
 		{
-			uint y = x == 0u ? 0u : uint.MaxValue;
+			uint y = (x==0u? 0u:uint.MaxValue);
 			while (++y != maxHeight)
 			{
 				gridPos.x = 2u * x;// 2 is the size of the objects (200 pixles, and the world is set to 100 pixels per unit)
@@ -633,12 +656,16 @@ public class MCScript : MonoBehaviour
 			}
 		}
 		savedAboveData = new SaveAboveData();
+		mcScript.craft.index = -1;
+		mcScript.smelt.index = -1;
 		savedBothData = new SaveBothGroundData();
 		SaveAll(savedBothData, new SaveBelowData(), savedAboveData);
 	}
 
 	public void LoadStage()
 	{
+		Transform smeltMenu = menu.Find("Smelting");
+		Transform content = smeltMenu.GetChild(1).GetChild(0).GetChild(0);
 		if (File.Exists(Application.persistentDataPath + saveStageFile))
 		{
 			BinaryFormatter bf = new BinaryFormatter();
@@ -699,9 +726,6 @@ public class MCScript : MonoBehaviour
 				}
 				mcScript.goldTxt.text = savedBothData.gold.ToString("F2");
 				GameObject.Find("MineralCountTxt").GetComponent<UnityEngine.UI.Text>().text = "0/" + savedBothData.bagSize;
-				// TODO:
-				// update timers
-				//
 			}
 			catch (Exception)
 			{
@@ -718,10 +742,8 @@ public class MCScript : MonoBehaviour
 		// after we have balanced the game, we can get rid of the unity editor objects and just create them with code
 		// this will require a lot of magic numbers that I don't want to deal with right now
 
-		Texture[] textures = Resources.LoadAll<Texture>("Collectibles");// all the different collectible images loaded once to prevent a bunch of resource collection
-		Transform smeltMenu = menu.Find("Smelting");
+		Sprite[] textures = Resources.LoadAll<Sprite>("Collectibles");// all the different collectible images loaded once to prevent a bunch of resource collection
 		smeltMenu.gameObject.SetActive(true);
-		Transform content = smeltMenu.GetChild(1).GetChild(0).GetChild(0);
 		Button[] buyButtons = content.GetComponentsInChildren<Button>();// grabs all the buttons in order (make sure in unity to keep them in order
 		GameObject costImage = Resources.Load<GameObject>("CostImage");// the individual object for every cost (I think it's easier then actually adding and changing the images manually)
 		int j = -1; while (++j != buyButtons.Length)
@@ -731,7 +753,7 @@ public class MCScript : MonoBehaviour
 			int indexOfCrafts = j + (int)COLLECTIBLES.CopperBar;
 			CostScript costScript = buyButton.GetComponent<CostScript>();
 			textures[indexOfCrafts].name = indexOfCrafts.ToString();
-			buyBtnTransform.GetChild(0).GetComponent<RawImage>().texture = textures[indexOfCrafts];// so I don't have to change them in Unity manually
+			buyBtnTransform.GetChild(0).GetComponent<Image>().sprite = textures[indexOfCrafts];// so I don't have to change them in Unity manually
 			Text btnTxt = buyBtnTransform.GetChild(1).GetComponent<Text>();
 			buyBtnTransform.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)indexOfCrafts).ToString();// name
 			buyButton.onClick.AddListener(() => ClickedBuyButton(buyBtnTransform));// honestly just being lazy here lol
@@ -751,7 +773,10 @@ public class MCScript : MonoBehaviour
 			{
 				Transform newCostImage = Instantiate(costImage, buyBtnTransform).transform;
 				newCostImage.localPosition = new Vector3((((RectTransform)newCostImage.transform).offsetMin.x - ((RectTransform)newCostImage.transform).offsetMax.x) * (i + 1) - 90f, -7f);
-				newCostImage.GetComponent<RawImage>().texture = textures[(int)costScript.indices[i]];// each texture has a number, so I don't need to save the indices
+				Image image = newCostImage.GetComponent<Image>();
+				int index = (int)costScript.indices[i];
+				image.sprite = textures[index];
+				image.sprite.name = index.ToString();
 				Text costImageTxt = newCostImage.GetChild(0).GetComponent<Text>();// this will be used for the cost in the future
 				costImageTxt.text = costScript.costs[i].ToString();
 				if (costScript.costs[i] > available)
@@ -761,6 +786,7 @@ public class MCScript : MonoBehaviour
 			}
 			Destroy(costScript);// my genius idea so I don't have to keep this memory!
 		}
+		smeltMenu.gameObject.SetActive(false);
 		// smelt index has to come first, bc crafting can be based off of the amounts
 		if (savedAboveData.smeltInd != -1)
 		{
@@ -768,21 +794,12 @@ public class MCScript : MonoBehaviour
 			smelt.lastAccessed = savedAboveData.smeltTime;
 			smelt.StartCraft(content.GetChild(0).GetChild(savedAboveData.smeltInd - (int)COLLECTIBLES.CopperBar));
 		}
-		else
-		{
-			smelt.index = -1;
-		}
 		if (savedAboveData.craftIndex != -1)
 		{
 			craft.index = savedAboveData.craftIndex;
 			craft.lastAccessed = savedAboveData.craftTime;
 			craft.StartCraft(content.GetChild(1).GetChild(savedAboveData.craftIndex - (int)COLLECTIBLES.Graphite));
 		}
-		else
-		{
-			craft.index = -1;
-		}
-		smeltMenu.gameObject.SetActive(false);
 	}
 
 	static public void IncreaseResource(int _index, int _amount = 1)
@@ -810,6 +827,9 @@ public class MCScript : MonoBehaviour
 					{
 						return;
 					}
+					break;
+				case MENUTYPE.Shop:
+					offset = (int)COLLECTIBLES.Beam;
 					break;
 				default:
 					offset = 0;
@@ -841,7 +861,7 @@ public class MCScript : MonoBehaviour
 					Text costImageTxt = costImage.GetChild(0).GetComponent<Text>();
 					int cost = int.Parse(System.Text.RegularExpressions.Regex.Match(costImageTxt.text, "\\d+").Value);
 					//																							the index of the costimage
-					int available = savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetComponent<RawImage>().texture.name, "\\d+").Value)];// might be able to remove the -1
+					int available = savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetComponent<Image>().sprite.name, "\\d+").Value)];// might be able to remove the -1
 					if (cost > available)
 					{
 						canClick = false;
@@ -878,8 +898,7 @@ public class MCScript : MonoBehaviour
 			savedBothData.gold -= goldAmount;
 			SetText("Gold -$" + goldAmount.ToString("F0"), Color.yellow, Camera.main.WorldToScreenPoint(_buyButton.position));
 			// the image has the index number in its name, and we need to set the value from -1 to 0
-			string helpme = System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<RawImage>().texture.name, "\\d+").Value;
-			savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<RawImage>().texture.name, "\\d+").Value)] = 0;
+			savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<Image>().sprite.name, "\\d+").Value)] = 0;
 			btnText.text = "Craft";
 			mcScript.UpdateCraftPrices(_buyButton.parent);// have to update all the the buttons bc you might not have enough gold to unlock them anymore
 		}
@@ -1069,13 +1088,12 @@ public class SaveAboveData
 	public int smeltInd, craftIndex;
 	public int[] collectibles;
 	public float[] dailyMineralValues;
-	public System.DateTime currTime;
+	public DateTime currTime;
+	public DateTime smeltTime;
+	public DateTime craftTime;
 	public List<int> highsAndLows;
-	public System.DateTime smeltTime;
-	public System.DateTime craftTime;
 	public SaveAboveData()
 	{
-		smeltInd = craftIndex = -1;
 		currTime = System.DateTime.Now;
 		collectibles = new int[(int)MCScript.COLLECTIBLES.Total]; // items
 																  // initialize to -1 so we know if they have unlocked it or not
@@ -1145,10 +1163,10 @@ public class SaveAboveData
 [Serializable]
 public class SaveBothGroundData
 {
-	public uint upgrades,/* bit field */tutorial, /* increase as you hit the spot or skip */bagSize, currTrackedMineral;
+	public uint upgrades,/* bit field */tutorial, /* increase as you hit the spot or skip */bagSize;
 	public float gold;
 	public int depth;
-	public ulong[] missions;// double bitfield missions can be accomplished anywhere
+	public uint[] missions, currTrackedMineral;// double bitfield missions can be accomplished anywhere
 
 	public SaveBothGroundData()
 	{
@@ -1156,7 +1174,8 @@ public class SaveBothGroundData
 		// TODO
 		// balance out costs
 		depth = -5;
-		missions = new ulong[2];
+		missions = new uint[5];
+		currTrackedMineral = new uint[5];
 		missions[0] = 1;
 		missions[1] = 1;
 	}
@@ -1165,17 +1184,17 @@ public class SaveBothGroundData
 [Serializable]
 public class SaveBelowData
 {
-	public System.UInt64[] tiles;// giant bitfield
+	public uint[,] tiles;// giant bitfield
 	public SaveBelowData()
 	{
-		tiles = new ulong[1000];
-		tiles[0] = 0xFC00000000000000u;
-		tiles[1] = 0xFC00000000000000u;
-		tiles[2] = 0xFC00000000000000u;
-		tiles[3] = 0xFC00000000000000u;
-		tiles[4] = 0xFC00000000000000u;
-		tiles[5] = 0xFC00000000000000u;
-		tiles[6] = 0xFC00000000000000u;
-		tiles[7] = 0xFC00000000000000u;
+		tiles = new uint[3,1000];
+		tiles[0, 0] = 0xFC000000;
+		tiles[0, 1] = 0xFC000000;
+		tiles[0, 2] = 0xFC000000;
+		tiles[0, 3] = 0xFC000000;
+		tiles[0, 4] = 0xFC000000;
+		tiles[0, 5] = 0xFC000000;
+		tiles[0, 6] = 0xFC000000;
+		tiles[0, 7] = 0xFC000000;
 	}
 }

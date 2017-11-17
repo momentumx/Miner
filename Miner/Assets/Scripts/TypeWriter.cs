@@ -212,7 +212,7 @@ public class TypeWriter : MonoBehaviour
 			yield return new WaitForSeconds(typingSpeed);
 		}
 		GetComponent<AudioSource>().Stop();
-		yield return new WaitForSeconds(1f);
+		yield return new WaitForSeconds(1.6f);
 		currCoroutine = null;
 		thingsToSay.RemoveAt(0);
 		if (smartTxt.function != null)

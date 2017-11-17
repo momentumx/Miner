@@ -69,7 +69,7 @@ public class CoppyScript : MonoBehaviour
 			transform.localScale = scale;
 			if ((int)target.position.y < MCScript.savedBothData.depth)
 			{
-				MCScript.savedBothData.depth = Mathf.FloorToInt(transform.position.y - .5f);// to prevent from calling a bunch of times
+				MCScript.savedBothData.depth = (int)(transform.position.y - 2.5f);// to prevent from calling a bunch of times
 				writer.AddMessage("Wow! new Depth reached: " + Mathf.Abs(MCScript.savedBothData.depth) * 5);
 			}
 		}
@@ -131,7 +131,7 @@ public class CoppyScript : MonoBehaviour
 					}
 					break;
 				case TUTORIALSTEPS.DownArrow:
-					GameObject.Find("Canvas").transform.GetChild(1).GetChild(5).GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.RemoveListener(() => IncreaseTutorial((int)TUTORIALSTEPS.DownArrow));
+					GameObject.Find("Canvas").transform.GetChild(1).GetChild(6).GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.RemoveListener(() => IncreaseTutorial((int)TUTORIALSTEPS.DownArrow));
 					target = GameObject.Find("Player").transform.Find("CoppyShoulder");
 					writer.AddMessage("To move around this place just swipe in the direction you want to move.");
 					tutCondtions.Add(new Condition(target.parent.parent.GetComponent<PlayerScript>(), -1, (x, y) => ((PlayerScript)x).digDirection != (int)y
