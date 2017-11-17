@@ -647,7 +647,7 @@ public class MCScript : MonoBehaviour
 		Vector2 gridPos;
 		uint x = uint.MaxValue; while (++x != maxWidth)
 		{
-			uint y = (x==0u? 0u:uint.MaxValue);
+			uint y = (x == 0u ? 0u : uint.MaxValue);
 			while (++y != maxHeight)
 			{
 				gridPos.x = 2u * x;// 2 is the size of the objects (200 pixles, and the world is set to 100 pixels per unit)
@@ -790,9 +790,16 @@ public class MCScript : MonoBehaviour
 		// smelt index has to come first, bc crafting can be based off of the amounts
 		if (savedAboveData.smeltInd != -1)
 		{
-			smelt.index = savedAboveData.smeltInd;
-			smelt.lastAccessed = savedAboveData.smeltTime;
-			smelt.StartCraft(content.GetChild(0).GetChild(savedAboveData.smeltInd - (int)COLLECTIBLES.CopperBar));
+			if (savedAboveData.smeltInd == 0)
+			{
+				savedAboveData.smeltInd = -1;
+			}
+			else
+			{
+				smelt.index = savedAboveData.smeltInd;
+				smelt.lastAccessed = savedAboveData.smeltTime;
+				smelt.StartCraft(content.GetChild(0).GetChild(savedAboveData.smeltInd - (int)COLLECTIBLES.CopperBar));
+			}
 		}
 		else
 		{
@@ -800,9 +807,16 @@ public class MCScript : MonoBehaviour
 		}
 		if (savedAboveData.craftIndex != -1)
 		{
-			craft.index = savedAboveData.craftIndex;
-			craft.lastAccessed = savedAboveData.craftTime;
-			craft.StartCraft(content.GetChild(1).GetChild(savedAboveData.craftIndex - (int)COLLECTIBLES.Graphite));
+			if (savedAboveData.craftIndex == 0)
+			{
+				savedAboveData.craftIndex = -1;
+			}
+			else
+			{
+				craft.index = savedAboveData.craftIndex;
+				craft.lastAccessed = savedAboveData.craftTime;
+				craft.StartCraft(content.GetChild(1).GetChild(savedAboveData.craftIndex - (int)COLLECTIBLES.Graphite));
+			}
 		}
 		else
 		{
@@ -1195,7 +1209,7 @@ public class SaveBelowData
 	public uint[,] tiles;// giant bitfield
 	public SaveBelowData()
 	{
-		tiles = new uint[3,1000];
+		tiles = new uint[3, 1000];
 		tiles[0, 0] = 0xFC000000;
 		tiles[0, 1] = 0xFC000000;
 		tiles[0, 2] = 0xFC000000;
