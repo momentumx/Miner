@@ -794,11 +794,19 @@ public class MCScript : MonoBehaviour
 			smelt.lastAccessed = savedAboveData.smeltTime;
 			smelt.StartCraft(content.GetChild(0).GetChild(savedAboveData.smeltInd - (int)COLLECTIBLES.CopperBar));
 		}
+		else
+		{
+			smelt.index = -1;
+		}
 		if (savedAboveData.craftIndex != -1)
 		{
 			craft.index = savedAboveData.craftIndex;
 			craft.lastAccessed = savedAboveData.craftTime;
 			craft.StartCraft(content.GetChild(1).GetChild(savedAboveData.craftIndex - (int)COLLECTIBLES.Graphite));
+		}
+		else
+		{
+			craft.index = -1;
 		}
 	}
 
