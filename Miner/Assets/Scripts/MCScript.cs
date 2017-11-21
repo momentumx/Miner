@@ -78,6 +78,7 @@ public class MCScript : MonoBehaviour
 	static SaveAboveData savedAboveData;
 	static public MCScript mcScript;
 	public CraftingScript smelt, craft;
+    public GameObject markerPrefab;
 
 	void Awake()
 	{
@@ -346,8 +347,23 @@ public class MCScript : MonoBehaviour
 
 	public void ItemUsed(int _itemIndex)
 	{
-		menu.Find("MainMenu").gameObject.SetActive(false);
-		--PlayerScript.items[_itemIndex - (int)COLLECTIBLES.Beam];
+		//menu.Find("MainMenu").gameObject.SetActive(false);
+		//--PlayerScript.items[_itemIndex - (int)COLLECTIBLES.Beam];
+        switch(_itemIndex)
+        {
+            case 0 :    // beam
+                break;
+            case 1:     // bridge
+                break;
+            case 2:     // marker
+                Instantiate(markerPrefab, FindObjectOfType<PlayerScript>().transform).AddComponent<Tile>();
+                //FindObjectOfType<PlayerScript>().transform;
+                break;
+            case 3:     // map piece
+                break;
+            case 4:     // teleporter
+                break;
+        }
 	}
 
 	public void GoUp()
