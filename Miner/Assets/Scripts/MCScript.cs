@@ -322,10 +322,12 @@ public class MCScript : MonoBehaviour
 			case MENUTYPE.Items:
 				i = -1;
 				finish = (int)differentItemCount;
+				bool hasItems = false;
 				while (++i != finish)
 				{
 					if (PlayerScript.items[i] != 0)
 					{
+						hasItems = true;
 						Transform newItem = Instantiate(mineralDisplay, content).transform;
 						if (CameraMovement.oldMode == CameraMovement.CAMERA_MODE.UnderGround)
 						{
@@ -338,6 +340,10 @@ public class MCScript : MonoBehaviour
 						((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
 					}
 				}
+				mainMenu.GetChild(7).gameObject.SetActive(!hasItems);// empty text
+				mainMenu.GetChild(8).GetChild(0).GetComponent<Text>().text = "Bag";// items button
+				mainMenu.GetChild(9).GetChild(0).GetComponent<Text>().text = "Items";// bag tab
+
 				break;
 			default:
 				break;

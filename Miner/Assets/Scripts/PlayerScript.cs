@@ -60,9 +60,105 @@ public class PlayerScript : MonoBehaviour
 				Vector3 newScale = transform.localScale;
 				newScale.x = Mathf.Abs(transform.localScale.x);
 				transform.localScale = newScale;
+				transform.GetChild(1).GetChild(0).gameObject.SetActive(false);
 				return;
 			}
-#if UNITY_EDITOR
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_EDITOR
+			bool horPressed = Input.GetButton("Horizontal");
+			if (horPressed || Input.GetButton("Vertical"))
+			{
+				Vector2 speed;
+				speed.x = Input.GetAxis("Horizontal");
+				speed.y = Input.GetAxis("Vertical");
+				if (horPressed)
+				{
+					Vector3 scale = transform.localScale;
+					scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
+					transform.localScale = scale;
+				}
+				switch (state)
+				{
+					case STATE.Flying:
+					case STATE.Normal:
+
+						digDirection = StrongPush(speed);
+						if (CheckDig(digDirection))
+						{
+							CreatStuff();
+							ChangeStates(STATE.Digging);
+							rigid.velocity = Vector2.zero;
+							rigid.gravityScale = 0f;
+							//defender.gameObject.isStatic = false;
+							return;
+						}
+						if (speed.y > .2f)
+						{
+							rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * .1f + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * .7f + rigid.velocity.y, maxSpeed));
+							ChangeStates(STATE.Flying);
+						}
+						else
+						{
+							speed.y = rigid.velocity.y;
+							anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
+							if (Physics2D.OverlapCircle(transform.position, .1f, ground))
+							{
+								speed.x *= maxSpeed;
+							}
+							else
+							{
+								speed.x = speed.x * .1f + rigid.velocity.x;
+								if (speed.x > maxSpeed)
+								{
+									speed.x = maxSpeed;
+								}
+								else if (speed.x < -maxSpeed)
+								{
+									speed.x = -maxSpeed;
+								}
+							}
+							rigid.velocity = speed;
+							ChangeStates(STATE.Normal);
+						}
+						break;
+					case STATE.Digging:
+						anim.SetFloat(animSpeedHash, speed.y);
+						if (StrongPush(speed) != digDirection)
+						{
+							ChangeStates(STATE.Normal);
+							rigid.gravityScale = 1f;
+						}
+						break;
+					case STATE.Celebrating:
+						if (flame.activeSelf)
+						{
+							rigid.velocity = Vector2.zero;
+						}
+						break;
+					case STATE.Dying:
+						break;
+					case STATE.Breaking:
+						break;
+					default:
+						break;
+				}
+			}
+			else if (Input.GetButtonUp("Horizontal") || Input.GetButtonUp("Vertical"))
+			{
+				if (state == STATE.Digging || state == STATE.Flying)
+				{
+					ChangeStates(STATE.Normal);
+					audioS.Stop();
+				}
+				rigid.gravityScale = 1f;
+				anim.SetFloat(animSpeedHash, 0f);
+			}
+			else
+			{
+				if (Physics2D.OverlapCircle(transform.position, .1f, ground))
+					rigid.velocity = new Vector2(0f, rigid.velocity.y);
+			}
+#endif
+#if false
 			if (Input.GetMouseButton(0))
 			{
 				if (Input.GetMouseButtonDown(0))
@@ -167,7 +263,8 @@ public class PlayerScript : MonoBehaviour
 					ChangeControllerAlpha(contrB.color.a - .6f);
 				}
 			}
-#else
+#endif
+#if UNITY_ANDROID || UNITY_IPHONE
 
 			if (Input.touchCount != 0)
 			{
@@ -326,7 +423,7 @@ public class PlayerScript : MonoBehaviour
 			MCScript.TILE_VALUES tileValue = (MCScript.TILE_VALUES)defender.value;
 			if (tileValue > MCScript.TILE_VALUES.Treasure)//if it lays minerals
 			{
-				int randomAmount = Random.Range(5, 16);
+				int randomAmount = Random.Range(8, 16);
 				UnityEngine.UI.Text mineralText = GameObject.Find("MineralCountTxt").GetComponent<UnityEngine.UI.Text>();
 				int bagCount = int.Parse(System.Text.RegularExpressions.Regex.Match(mineralText.text, "\\d+").Value);
 				if (randomAmount + bagCount >= MCScript.savedBothData.bagSize)

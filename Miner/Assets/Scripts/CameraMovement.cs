@@ -56,11 +56,6 @@ public class CameraMovement : MonoBehaviour
 				break;
 			case CAMERA_MODE.UnderGround:
 				transform.position += (Vector3)(((Vector2)target.transform.position - (Vector2)transform.position) * .04f);
-				// turn position into bitfield space
-				// x = (int)transform.position / 200; y = 
-				// find closest bits on grid
-				// for each bit check if its off
-				// if its off turn it on and instantiate a tile
 				break;
 			case CAMERA_MODE.Map:
 				Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize, 4f, 10f);
@@ -81,10 +76,15 @@ public class CameraMovement : MonoBehaviour
 			default:
 				break;
 		}
-		if (transform.position.x > width)
+		Vector3 camPos = transform.position;
+		if (camPos.x > width)
 			transform.position = new Vector3(width, transform.position.y);
-		else if (transform.position.x < 3f)
-			transform.position = new Vector3(3f, transform.position.y);
+		else
+		{
+			float sWidth = Screen.width * .005f;
+			if (camPos.x < sWidth)
+				transform.position = new Vector3(sWidth, transform.position.y);
+		}
 
 	}
 
