@@ -15,7 +15,7 @@ public class PlayerScript : MonoBehaviour
 	GameObject flame;
 	[SerializeField]
 	float maxSpeed = .4f, backImageRadius = .185f;
-	Tile defender;
+	public Tile defender;
 	[SerializeField]
 	LayerMask tiles, ground;
 	int animSpeedHash, animStateHash;
@@ -52,7 +52,7 @@ public class PlayerScript : MonoBehaviour
 			{
 				rigid.velocity = Vector2.zero;
 				rigid.gravityScale = 0f;
-				CameraMovement.cam.GoVisit(3f);
+				CameraMovement.cam.GoVisit();
 				ChangeStates(STATE.WalkIn);// play the enter animation
 				ChangeControllerAlpha(0f);// the controller only works underground so we need to turn it off here
 				audioS.Stop();// stop the flame noise
@@ -475,10 +475,13 @@ public class PlayerScript : MonoBehaviour
 					case MCScript.TILE_VALUES.Map:
 						ChangeStates(STATE.Celebrating);
 						++items[3];
+						dropItem.transform.position = defender.transform.position;
+						dropItem.Emit(1);
+						var temp = dropItem.textureSheetAnimation;
+						temp.rowIndex = (int)MCScript.COLLECTIBLES.Marsinium+1;
 						break;
 					case MCScript.TILE_VALUES.Treasure:
-						MCScript.SetText("Gold +$$$$10,0000", Color.yellow, Camera.main.WorldToScreenPoint(defender.transform.position));
-						MCScript.ChangeGold(10000f);
+						MCScript.ChangeGold(10000f, Camera.main.WorldToScreenPoint(defender.transform.position));
 						ChangeStates(STATE.Celebrating);
 						break;
 					default:

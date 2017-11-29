@@ -22,7 +22,6 @@ GameObject:
   - component: {fileID: 222281178778884712}
   - component: {fileID: 114602489466672102}
   - component: {fileID: 95029342808872324}
-  - component: {fileID: 114947769231784080}
   m_Layer: 5
   m_Name: SwipeHand
   m_TagString: Untagged
@@ -73,18 +72,6 @@ MonoBehaviour:
     y: 0
     width: 1
     height: 1
---- !u!114 &114947769231784080
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1613273774286752}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc6ef356bf38db142a7f9186d2826d50, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  tutStep: 0
 --- !u!222 &222281178778884712
 CanvasRenderer:
   m_ObjectHideFlags: 1

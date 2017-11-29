@@ -102,7 +102,7 @@ public class CameraMovement : MonoBehaviour
 	}
 
 	// Used when we are actually going up
-	public void GoVisit(float _x)
+	public void GoVisit()
 	{
 		target.transform.position = new Vector2(.3f, 2.45f);
 		bool goingDown = transform.position.y == 1f;
@@ -116,7 +116,7 @@ public class CameraMovement : MonoBehaviour
 			target.ChangeStates(PlayerScript.STATE.WalkIn);
 			upperMenu.SetActive(true);
 		}
-		GoView(_x, goingDown);
+		GoView(Screen.width * .005f, goingDown);
 	}
 
 	// used when we are just peeking (not able to select buttons)

@@ -56,6 +56,7 @@ public class CraftingScript : MonoBehaviour
 			MCScript.IncreaseResource(index);
 		}
 		return true;
+		//play noise
 		//MCScript.SetText(((MCScript.COLLECTIBLES)index).ToString() + " +" + _numberOfTimes, Color.green, Camera.main.ViewportToScreenPoint(new Vector3(.5f, .7f)));
 	}
 

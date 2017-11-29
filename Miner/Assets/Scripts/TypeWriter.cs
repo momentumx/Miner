@@ -8,10 +8,9 @@ public class TypeWriter : MonoBehaviour
 	public class SmartText
 	{
 		public string text;
-		public int tutStep;
-		public delegate void FuncPtr(int _step);
-		public FuncPtr function;
-		public SmartText(string _text, FuncPtr _func = null, int _step = -1)
+		public System.Object tutStep;
+		public AnyFunction function;
+		public SmartText(string _text, AnyFunction _func = null, System.Object _step = null)
 		{
 			function = _func;
 			text = _text;
@@ -172,7 +171,7 @@ public class TypeWriter : MonoBehaviour
 		TurnOff();
 	}
 
-	public void AddMessage(string _text, SmartText.FuncPtr _func = null, int _tutStep = -1)
+	public void AddMessage(string _text,AnyFunction _func = null, System.Object _tutStep = null)
 	{
 		thingsToSay.Add(new SmartText(_text, _func, _tutStep));
 		if (!enabled)

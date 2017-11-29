@@ -14,12 +14,12 @@ public class MCScript : MonoBehaviour
 	const string saveAboveFile = "/DontTouch2.dat";
 	const string saveBothFile = "/DontTouch3.dat";
 	const string saveBelowFile = "/DontTouch4.dat";
-	public const uint differentItemCount = 5;
+	public const int differentItemCount = 5;
 
 	public enum TILE_VALUES
 	{
 		Dirt, Stone, Oil, Artifact, Map, Treasure, Coal, Copper, Nickel, Opal, Zinc, Iron, Tin, Aluminum, Amethyst, Silver, Gold, Ruby, Emerald
-			, Azurite, Onyx, Pearl, Chromium, Sapphire, Topaz, Titanium, Diamond, Platinum, Kryptonium, Plutonium, Rubber, Marsinium,
+			, Azurite, Onyx, Pearl, Chromium, Sapphire, Topaz, Titanium, Diamond, Platinum, Kryptonium, Plutonium, Marsinium,
 
 		Total
 	}
@@ -34,14 +34,15 @@ public class MCScript : MonoBehaviour
 			, StainleeSteel, GoldBar, TitaniumBar, PlatinumBar, Kryptonite, PlutoniumBar, MarsiniumBar
 
 			// craftables
-			, Graphite, Wire, Nail, ArmorPlate, HeatSink, Tools, StrongAxe, Magnet, Pipe, Valve, Can, Spring, Gears, GoldAxe, Foil, Turbine, RubyAxe, Knob, Propeller, Zipper, SapphireAxe, Bearings, Battery, DiamondAxe
-			, Frame, Fuselage, Transformer, CarbonFilter, Solder, KryptoAxe, MicroChip, Mirror, GPS, UltimateWeapon
+			, Graphite, Wire, Nail, ArmorPlate, HeatSink, StrongAxe, Pipe, Tools, Valve, Can, Spring, Gears, GoldAxe, Foil, Magnet, Turbine, RubyAxe, Knob
+			, Propeller, Zipper, SapphireAxe, Bearings, Battery, DiamondAxe, Frame, Fuselage, Transformer, CarbonFilter, Solder, KryptoAxe, MicroChip
+			, Mirror, GPS, UltimateWeapon
 
 			// items
 			, Beam, Bridge, Marker, MapPiece, Teleporter
 
 			// unfindables
-			, Artifact1,
+			, Rubber, Oil, Dirt, Chest, RareChest, Gems, Artifact,
 
 		Total
 	}
@@ -50,7 +51,6 @@ public class MCScript : MonoBehaviour
 	public enum TILE_GEMTYPES { Single, Mineral, Rhombus, Dagger, Diamond, Heart, Hexagon, Leaf, Triangle }
 	public enum MENUTYPE { Minerals, Bars, Crafts, Bag, Shop, Items, Crafting }
 	static public MENUTYPE menuType;
-	public enum MISSION { }
 
 
 	static public Text txt;
@@ -78,7 +78,7 @@ public class MCScript : MonoBehaviour
 	static SaveAboveData savedAboveData;
 	static public MCScript mcScript;
 	public CraftingScript smelt, craft;
-    public GameObject markerPrefab;
+	public GameObject markerPrefab;
 
 	void Awake()
 	{
@@ -92,7 +92,6 @@ public class MCScript : MonoBehaviour
 		PersistentManager.mmScript.SwitchMusic(PersistentManager.MUSIC_CLIP.DayTime);
 		PersistentManager.SetAllAudioSources();
 		LoadStage();
-		TILE_VALUES temp;
 	}
 
 	private void Update()
@@ -187,11 +186,6 @@ public class MCScript : MonoBehaviour
 		}
 	}
 
-	public void ChangeMenuType(int _type)
-	{
-		menuType = (MENUTYPE)_type;
-	}
-
 	public static void Win()
 	{
 
@@ -203,8 +197,10 @@ public class MCScript : MonoBehaviour
 		currOpenBuilding = null;
 	}
 
-	public void SetMainMenu()
+	public void SetMainMenu(int _type)
 	{
+		if (_type != -1)
+			menuType = (MENUTYPE)_type;
 		Transform mainMenu = menu.Find("MainMenu");
 		if (mainMenuContent.childCount != 0)
 		{
@@ -301,12 +297,18 @@ public class MCScript : MonoBehaviour
 				}
 				mainMenu.GetChild(7).gameObject.SetActive(i == 0 ? true : false);// empty text
 
+				mainMenu.GetChild(8).GetChild(0).GetComponent<Text>().text = "Items";// items button text
+				Button.ButtonClickedEvent onClick = mainMenu.GetChild(8).GetComponent<Button>().onClick;
+				onClick.RemoveAllListeners();
+				onClick.AddListener(() => SetMainMenu((int)MENUTYPE.Items));
+				mainMenu.GetChild(9).GetChild(0).GetComponent<Text>().text = "Bag";// bag tab
+
 				break;
 			case MENUTYPE.Shop:
 				ChangeTabColor(tab.GetChild(3));
 				i = (int)COLLECTIBLES.UltimateWeapon;
 				offset = i + 1;
-				finish = (int)COLLECTIBLES.Artifact1;
+				finish = (int)COLLECTIBLES.Rubber;
 				while (++i != finish)
 				{
 					Transform newItem = Instantiate(mineralDisplay, content).transform;
@@ -321,28 +323,56 @@ public class MCScript : MonoBehaviour
 				}
 				break;
 			case MENUTYPE.Items:
-				i = -1;
-				finish = (int)differentItemCount;
 				bool hasItems = false;
-				while (++i != finish)
-				{
-					if (PlayerScript.items[i] != 0)
+
+				// aboveground
+				if (CameraMovement.oldMode != CameraMovement.CAMERA_MODE.UnderGround)
+				{// if we are above ground, then we are only going to use
+					i = (int)COLLECTIBLES.UltimateWeapon;
+					offset = i + 1;
+					finish = (int)COLLECTIBLES.Rubber;
+					while (++i != finish)
 					{
-						hasItems = true;
-						Transform newItem = Instantiate(mineralDisplay, content).transform;
-						if (CameraMovement.oldMode == CameraMovement.CAMERA_MODE.UnderGround)
+						if (savedAboveData.collectibles[i] != 0)
 						{
+							hasItems = true;
+							Transform newItem = Instantiate(mineralDisplay, content).transform;
+							newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i];
+							newItem.GetChild(1).GetComponent<Text>().text = savedAboveData.collectibles[i].ToString();// amount text
+							newItem.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)i).ToString();// name
+							((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + ((i - offset) % 3) * 194, -8 - 304 * ((i - offset) / 3));
+						}
+						else
+						{
+							--offset;
+						}
+					}
+				}
+				// below ground
+				else
+				{
+					finish = differentItemCount;
+					i = -1;
+					while (++i != finish)
+					{
+						if (PlayerScript.items[i] != 0)
+						{
+							hasItems = true;
+							Transform newItem = Instantiate(mineralDisplay, content).transform;
 							int passedByRef = i;
 							newItem.GetComponent<Button>().onClick.AddListener(() => ItemUsed(passedByRef));
+							newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i + (int)COLLECTIBLES.Beam];
+							newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.items[i].ToString();
+							newItem.GetChild(2).GetComponent<Text>().text = (i + COLLECTIBLES.Beam).ToString();
+							((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
 						}
-						newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i + (int)COLLECTIBLES.Beam];
-						newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.items[i].ToString();
-						newItem.GetChild(2).GetComponent<Text>().text = (i + COLLECTIBLES.Beam).ToString();
-						((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
 					}
 				}
 				mainMenu.GetChild(7).gameObject.SetActive(!hasItems);// empty text
-				mainMenu.GetChild(8).GetChild(0).GetComponent<Text>().text = "Bag";// items button
+				mainMenu.GetChild(8).GetChild(0).GetComponent<Text>().text = "Bag";// items button text
+				Button.ButtonClickedEvent onClick2 = mainMenu.GetChild(8).GetComponent<Button>().onClick;
+				onClick2.RemoveAllListeners();
+				onClick2.AddListener(() => SetMainMenu((int)MENUTYPE.Bag));
 				mainMenu.GetChild(9).GetChild(0).GetComponent<Text>().text = "Items";// bag tab
 
 				break;
@@ -353,23 +383,23 @@ public class MCScript : MonoBehaviour
 
 	public void ItemUsed(int _itemIndex)
 	{
-		//menu.Find("MainMenu").gameObject.SetActive(false);
-		//--PlayerScript.items[_itemIndex - (int)COLLECTIBLES.Beam];
-        switch(_itemIndex)
-        {
-            case 0 :    // beam
-                break;
-            case 1:     // bridge
-                break;
-            case 2:     // marker
-                Instantiate(markerPrefab, FindObjectOfType<PlayerScript>().transform).AddComponent<Tile>();
-                //FindObjectOfType<PlayerScript>().transform;
-                break;
-            case 3:     // map piece
-                break;
-            case 4:     // teleporter
-                break;
-        }
+		menu.Find("MainMenu").gameObject.SetActive(false);
+		--PlayerScript.items[_itemIndex];
+		switch (_itemIndex)
+		{
+			case 0:    // beam
+				break;
+			case 1:     // bridge
+				break;
+			case 2:     // marker
+				Instantiate(markerPrefab, FindObjectOfType<PlayerScript>().transform).AddComponent<Tile>();
+				//FindObjectOfType<PlayerScript>().transform;
+				break;
+			case 3:     // map piece
+				break;
+			case 4:     // teleporter
+				break;
+		}
 	}
 
 	public void GoUp()
@@ -387,13 +417,18 @@ public class MCScript : MonoBehaviour
 
 	public void GoDown()
 	{
+		SetPlayerItems();
+		SaveAll(savedBothData, SavedAboveData);
+		savedAboveData = null;
+	}
+
+	public void SetPlayerItems()
+	{
 		// make sure the player has the items it might of boughten
 		int i = -1; while (++i != differentItemCount)
 		{
 			PlayerScript.items[i] = (ushort)SavedAboveData.collectibles[i + (int)COLLECTIBLES.Beam];
 		}
-		SaveAll(savedBothData, SavedAboveData);
-		savedAboveData = null;
 	}
 
 	public void SellMineralMenu(int _index)
@@ -404,7 +439,7 @@ public class MCScript : MonoBehaviour
 		indexOfSell = _index;
 		sellMenu.Find("ValueTxt").GetComponent<Text>().text = "Today's Price: " + savedAboveData.dailyMineralValues[indexOfSell].ToString("F2");
 
-		Slider slider = sellMenu.Find("Slider").GetComponent<Slider>();
+		//Slider slider = sellMenu.Find("Slider").GetComponent<Slider>();
 		ChangeTabColor(sellMenu.Find("Tabs").GetChild(0));
 		sellMenu.Find("SellBtn").gameObject.SetActive(true);
 		sellMenu.Find("BuyBtn").gameObject.SetActive(false);
@@ -453,7 +488,7 @@ public class MCScript : MonoBehaviour
 		}
 		else
 		{
-			slider.maxValue = (int)savedBothData.gold / (int)savedAboveData.dailyMineralValues[indexOfSell];
+			slider.maxValue = Mathf.Floor(savedBothData.gold / savedAboveData.dailyMineralValues[indexOfSell]);
 		}
 		sellMenu.Find("TotalTxt").GetComponent<Text>().text = "Total:\n" + slider.maxValue;
 		SetSellValue(slider.value);
@@ -465,7 +500,7 @@ public class MCScript : MonoBehaviour
 		int value = (int)sellMenu.Find("Slider").GetComponent<Slider>().value * (_selling ? -1 : 1);
 		savedAboveData.collectibles[indexOfSell] += value;
 		SetSliderMax();
-		ChangeGold(-value * savedAboveData.dailyMineralValues[indexOfSell]);
+		ChangeGold(-value * savedAboveData.dailyMineralValues[indexOfSell], goldTxt.transform.position);
 		// don't save here to allow for mistakes (they can restart and take it back)
 		// on second thought, the price for sale and buy is the same...
 		//SaveData(savedAboveData);
@@ -493,9 +528,7 @@ public class MCScript : MonoBehaviour
 		switch ((FUNCTIONCALL)_function)
 		{
 			case FUNCTIONCALL.Collect:
-				savedBothData.gold += currOpenBuilding.collection;
-				txt.transform.position = Camera.main.WorldToScreenPoint(transform.position);
-				txt.color = Color.yellow;
+				ChangeGold(currOpenBuilding.collection, Camera.main.WorldToScreenPoint(transform.position));
 				currOpenBuilding.collection = 0f;
 				currOpenBuilding = null;
 				break;
@@ -535,7 +568,7 @@ public class MCScript : MonoBehaviour
 	//@since depth is a negative number bc as you go down y decreases
 	public static int FullHpForDepth(float _y)
 	{
-		return Mathf.Min(Mathf.RoundToInt(Map(-_y, 0f, 900f, 4f, 28f)), 28);
+		return Mathf.Min(Mathf.RoundToInt(Map(-_y, 0f, 900f, 2f, 28f)), 28);
 	}
 
 	static public float Map(float value, float minlow, float minHigh, float maxLow, float maxHigh)
@@ -602,6 +635,14 @@ public class MCScript : MonoBehaviour
 		_data.craftTime = mcScript.craft.lastAccessed.AddSeconds(-mcScript.craft.currTime);
 
 		new BinaryFormatter().Serialize(fs, _data);
+		fs.Close();
+	}
+
+	static public void SaveBothOnly()
+	{
+		FileStream fs = File.Create(Application.persistentDataPath + saveBothFile);
+
+		new BinaryFormatter().Serialize(fs, savedBothData);
 		fs.Close();
 	}
 
@@ -688,7 +729,7 @@ public class MCScript : MonoBehaviour
 	{
 		Transform smeltMenu = menu.Find("Smelting");
 		Transform content = smeltMenu.GetChild(1).GetChild(0).GetChild(0);
-		if (File.Exists(Application.persistentDataPath + saveStageFile))
+		if (false)//File.Exists(Application.persistentDataPath + saveStageFile))
 		{
 			BinaryFormatter bf = new BinaryFormatter();
 			FileStream fs = File.Open(Application.persistentDataPath + saveStageFile, FileMode.Open);
@@ -938,9 +979,7 @@ public class MCScript : MonoBehaviour
 			Destroy(main.GetChild(0).gameObject);
 			Text btnText = _buyButton.GetChild(1).GetComponent<Text>();
 			// the cost is stored in the btn text initally until it is unlocked
-			float goldAmount = int.Parse(System.Text.RegularExpressions.Regex.Match(btnText.text, "\\d+").Value);
-			savedBothData.gold -= goldAmount;
-			SetText("Gold -$" + goldAmount.ToString("F0"), Color.yellow, Camera.main.WorldToScreenPoint(_buyButton.position));
+			ChangeGold(-int.Parse(System.Text.RegularExpressions.Regex.Match(btnText.text, "\\d+").Value), Camera.main.WorldToScreenPoint(_buyButton.position));
 			// the image has the index number in its name, and we need to set the value from -1 to 0
 			savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(_buyButton.GetChild(0).GetComponent<Image>().sprite.name, "\\d+").Value)] = 0;
 			btnText.text = "Craft";
@@ -974,10 +1013,11 @@ public class MCScript : MonoBehaviour
 		txt.transform.position = _position;
 	}
 
-	static public void ChangeGold(float _amount)
+	static public void ChangeGold(float _amount, Vector3 _position)
 	{
 		savedBothData.gold += _amount;
 		mcScript.goldTxt.text = savedBothData.gold.ToString("F2");
+		SetText("Gold -$" + _amount.ToString("F2"), Color.yellow, _position);
 	}
 
 	IEnumerator CreateSparks()
@@ -999,8 +1039,7 @@ public class MCScript : MonoBehaviour
 			}
 			savedAboveData.collectibles[index] += (int)item.GetAmount();
 		}
-		menuType = MENUTYPE.Minerals;
-		mcScript.SetMainMenu();
+		mcScript.SetMainMenu((int)MENUTYPE.Minerals);
 		PlayerScript.bag = new List<TypeAmount>();// erase the data in the bag
 		Transform mainMenu = menu.Find("MainMenu");
 		mainMenu.gameObject.SetActive(true);
@@ -1145,9 +1184,12 @@ public class SaveAboveData
 		{
 			collectibles[i] = -1;
 		}
+		collectibles[(int)MCScript.COLLECTIBLES.Beam] = 5;
+		collectibles[(int)MCScript.COLLECTIBLES.Marker] = 5;
+		collectibles[(int)MCScript.COLLECTIBLES.Bridge] = 5;
 		dailyMineralValues = new float[collectibles.Length];
-		dailyMineralValues[(int)MCScript.COLLECTIBLES.MapPiece] = 2f;
 		dailyMineralValues[(int)MCScript.COLLECTIBLES.Beam] = 2f;
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.MapPiece] = 2f;
 		dailyMineralValues[(int)MCScript.COLLECTIBLES.Bridge] = 2f;
 		dailyMineralValues[(int)MCScript.COLLECTIBLES.Teleporter] = 2f;
 		dailyMineralValues[(int)MCScript.COLLECTIBLES.Marker] = 2f;
@@ -1157,16 +1199,13 @@ public class SaveAboveData
 	{
 		int i = -1; while (++i != (int)MCScript.COLLECTIBLES.CopperBar)
 		{
-			dailyMineralValues[i] = Mathf.Pow(1f + UnityEngine.Random.Range(0f, .6f), i);
+			dailyMineralValues[i] = i + UnityEngine.Random.Range(.75f, 1 + .6f * i);
 		}
-		--i; while (++i != (int)MCScript.COLLECTIBLES.Graphite)
+
+		do
 		{
-			dailyMineralValues[i] = 200f + Mathf.Pow(2.3f + UnityEngine.Random.Range(0f, .6f), i - 31);
-		}
-		--i; while (++i != (int)MCScript.COLLECTIBLES.Beam)
-		{
-			dailyMineralValues[i] = 20f + Mathf.Pow(1.5f + UnityEngine.Random.Range(0f, .6f), i - 61);
-		}
+			dailyMineralValues[i] = 200f + Mathf.Pow(i - (int)MCScript.COLLECTIBLES.CopperBar, UnityEngine.Random.Range(1.8f, 3f));
+		} while (++i != (int)MCScript.COLLECTIBLES.Beam);
 
 		int highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.CopperBar), lowOutlier;
 		List<int> selectedHighLow = new List<int>(6);
@@ -1181,20 +1220,20 @@ public class SaveAboveData
 		dailyMineralValues[lowOutlier] *= UnityEngine.Random.Range(.3f, .8f);
 
 		//bars
-		highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Graphite);
+		highOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.CopperBar, (int)MCScript.COLLECTIBLES.Graphite);
 		do
 		{
-			lowOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Graphite);
+			lowOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.CopperBar, (int)MCScript.COLLECTIBLES.Graphite);
 		} while (lowOutlier != highOutlier);
 		selectedHighLow.Add(highOutlier); selectedHighLow.Add(lowOutlier);
 		dailyMineralValues[highOutlier] *= UnityEngine.Random.Range(1.2f, 2.3f);
 		dailyMineralValues[lowOutlier] *= UnityEngine.Random.Range(.3f, .8f);
 
 		// crafts
-		highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Beam);
+		highOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.Graphite, (int)MCScript.COLLECTIBLES.Beam);
 		do
 		{
-			lowOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.Beam);
+			lowOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.Graphite, (int)MCScript.COLLECTIBLES.Beam);
 		} while (lowOutlier != highOutlier);
 		selectedHighLow.Add(highOutlier); selectedHighLow.Add(lowOutlier);
 		dailyMineralValues[highOutlier] *= UnityEngine.Random.Range(1.2f, 2.3f);
@@ -1207,21 +1246,17 @@ public class SaveAboveData
 [Serializable]
 public class SaveBothGroundData
 {
-	public uint upgrades,/* bit field */tutorial, /* increase as you hit the spot or skip */bagSize;
+	public uint upgrades,/* <- bit fields -> */ unskippableTutorial, tutorial, bagSize;
 	public float gold;
-	public int depth;
-	public uint[] missions, currTrackedMineral;// double bitfield missions can be accomplished anywhere
+	public int[] missions, trackingAmount;// double bitfield missions can be accomplished anywhere
 
 	public SaveBothGroundData()
 	{
 		bagSize = 50;
 		// TODO
 		// balance out costs
-		depth = -5;
-		missions = new uint[5];
-		currTrackedMineral = new uint[5];
-		missions[0] = 1;
-		missions[1] = 1;
+		missions = new int[(int)CoppyScript.MISSIONTYPE.Total];
+		trackingAmount = new int[(int)CoppyScript.MISSIONTYPE.Total];
 	}
 }
 

@@ -28,7 +28,8 @@ public class PersistentManager : MonoBehaviour
 
 	AsyncOperation aOp;
 	static public GameObject loadingScreen;
-	public GameObject backBtn;
+	public GameObject backBtn, loadingObject;
+	public UnityEngine.Video.VideoPlayer vPlay;
 	static public Transform canvas;
 
 	static public PersistentManager mmScript;
@@ -39,6 +40,11 @@ public class PersistentManager : MonoBehaviour
 		{
 			Destroy(gameObject);
 			return;
+		}
+		if (vPlay)
+		{
+			vPlay.Prepare();
+			vPlay.prepareCompleted += PlayVideo;
 		}
 		musicPlayer = GetComponents<AudioSource>()[0];
 		sfxPlayer = GetComponents<AudioSource>()[1];
@@ -61,17 +67,26 @@ public class PersistentManager : MonoBehaviour
 		transition.ignoreListenerVolume = true;
 	}
 
+	void PlayVideo(UnityEngine.Video.VideoPlayer _player)
+	{
+		if (loadingObject)
+		{
+			loadingObject.SetActive(false);
+		}
+		_player.Play();
+	}
+
 	void LoadScreen(string _sceneName)
 	{
 		Time.timeScale = 1;
 		if (canvas)
 		{
 
-		Transform menu = canvas.Find("Menus");
-		if (menu)
-			menu.gameObject.SetActive(false);
-		if (trans == TRANSITION.Fade)
-			menu.Find("Fader").GetComponent<RawImage>().CrossFadeAlpha(1f, 2f, true);
+			Transform menu = canvas.Find("Menus");
+			if (menu)
+				menu.gameObject.SetActive(false);
+			if (trans == TRANSITION.Fade)
+				menu.Find("Fader").GetComponent<RawImage>().CrossFadeAlpha(1f, 2f, true);
 		}
 		if (loadingScreen)
 		{
@@ -102,7 +117,7 @@ public class PersistentManager : MonoBehaviour
 		{
 			Slider musicSlider = musicSliderT.GetComponent<Slider>();
 			musicSlider.value = CurrMusicPlayer().volume;
-			if (musicSlider.onValueChanged.GetPersistentEventCount() ==0)
+			if (musicSlider.onValueChanged.GetPersistentEventCount() == 0)
 			{
 				musicSlider.onValueChanged.AddListener(SetMusicVol);
 			}
