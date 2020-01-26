@@ -3,16 +3,36 @@ using System.Collections.Generic;
 using UnityEngine;
 public class Tile : MonoBehaviour  {
 
+	public static bool drag;
 	public byte value, state;
 	public sbyte hp;
 	SpriteRenderer jewel;
 
 	// this all needs to be removed when we have final colors
-	[SerializeField]
-	Color jewelColor;
-	void Update () {
-		if(jewel)
-		jewel.color = jewelColor;
+	//[SerializeField]
+	//Color jewelColor;
+	//void Update () {
+	//	if(jewel)
+	//	jewel.color = jewelColor;
+	//}
+
+	public void OnMouseUpAsButton()
+	{
+		if (!drag)
+		{
+			PlayerScript.target = transform;
+		}
+	}
+
+	public void OnMouseEnter()
+	{
+
+		drag = true;
+	}
+
+	public void OnMouseDown()
+	{
+		drag = false;
 	}
 
 	public void OnTriggerEnter2D ( Collider2D _other ) {
@@ -163,7 +183,7 @@ public class Tile : MonoBehaviour  {
 				default:
 					break;
 			}
-			jewelColor = jewel.color;
+			//jewelColor = jewel.color;
 		}
 	}
 }

@@ -11,8 +11,8 @@ public class CameraMovement : MonoBehaviour
 	PlayerScript target;
 	Vector2 lastPos, speed;
 	const float acc = .93f;
-	public float width;
-	public GameObject upperMenu;
+	public float width, mapModeSpd = .02f;
+	public GameObject upperMenu, mapMenu, lowerMenu;
 	static public CameraMovement cam;
 
 	void Start()
@@ -21,14 +21,12 @@ public class CameraMovement : MonoBehaviour
 		target = FindObjectOfType<PlayerScript>();
 	}
 
-	void FixedUpdate()
+	void Update()
 	{
-
 		switch (cameraMode)
 		{
 			case CAMERA_MODE.AboveSlide:
 			case CAMERA_MODE.Above:
-				Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize, 4f, 6f);
 				if (Input.GetMouseButton(0))
 				{
 					if (Input.GetMouseButtonDown(0))
@@ -49,16 +47,13 @@ public class CameraMovement : MonoBehaviour
 					speed.x *= acc;
 				}
 				transform.position += (Vector3)speed;
-				if (transform.position.x > Screen.width)
-					transform.position = new Vector3(Screen.width * .5f, transform.position.y);
-				else if (transform.position.x < 3f)
-					transform.position = new Vector3(3f, transform.position.y);
 				break;
 			case CAMERA_MODE.UnderGround:
 				transform.position += (Vector3)(((Vector2)target.transform.position - (Vector2)transform.position) * .04f);
 				break;
 			case CAMERA_MODE.Map:
-				Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize, 4f, 10f);
+				Camera.main.orthographicSize -= Input.GetAxis("WheelZoom");
+				Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize, 6f, 30f);
 				if (Input.GetMouseButton(0))
 				{
 					if (Input.GetMouseButtonDown(0))
@@ -68,29 +63,26 @@ public class CameraMovement : MonoBehaviour
 					else
 					{
 						speed = (Vector2)Input.mousePosition - lastPos;
-						transform.position += (Vector3)speed;
+						transform.position += (Vector3)speed * mapModeSpd;
 						lastPos = Input.mousePosition;
 					}
 				}
+				float topY = -30 * Screen.height / (Screen.width * 2) - 2f;
+				if (transform.position.y > topY)
+					transform.position = new Vector3(transform.position.x, topY);
 				break;
 			default:
 				break;
 		}
-		Vector3 camPos = transform.position;
-		if (camPos.x > width)
+		float camPosX = transform.position.x;
+		if (camPosX > width)
 			transform.position = new Vector3(width, transform.position.y);
 		else
 		{
-			float sWidth = Screen.width * .005f;
-			if (camPos.x < sWidth)
+			float sWidth = Camera.main.orthographicSize * Screen.width / Screen.height - .75f;
+			if (camPosX < sWidth)
 				transform.position = new Vector3(sWidth, transform.position.y);
 		}
-
-	}
-
-	void Update()
-	{
-		Camera.main.orthographicSize -= Input.GetAxis("WheelZoom") * .03f;
 	}
 
 	// called from animator after the transition
@@ -108,22 +100,24 @@ public class CameraMovement : MonoBehaviour
 		bool goingDown = transform.position.y == 1f;
 		if (goingDown)
 		{
+			CoppyScript.coppy.depthTxt.transform.parent.gameObject.SetActive(true);
 			target.ChangeStates(PlayerScript.STATE.Normal);
 			target.GetComponent<Rigidbody2D>().gravityScale = 0f;
 		}
 		else
 		{
+			CoppyScript.coppy.depthTxt.transform.parent.gameObject.SetActive(false);
 			target.ChangeStates(PlayerScript.STATE.WalkIn);
 			upperMenu.SetActive(true);
 		}
-		GoView(Screen.width * .005f, goingDown);
+		GoView(Camera.main.orthographicSize * Screen.width / Screen.height - .75f, goingDown);
 	}
 
 	// used when we are just peeking (not able to select buttons)
 	public void GoView(float _x, bool _goingDown)
 	{
 		cameraMode = CAMERA_MODE.Transition;
-		StartCoroutine(MoveToPos(_x, _goingDown));
+		StartCoroutine(MoveToPos(_x, () => SetupPlayer(_goingDown)));
 	}
 
 	//public void SetCameraMode(CAMERA_MODE _mode)
@@ -147,6 +141,12 @@ public class CameraMovement : MonoBehaviour
 		cameraMode = (CAMERA_MODE)_mode;
 	}
 
+	public void GoMap(bool startMap)
+	{
+		cameraMode = CAMERA_MODE.Transition;
+		StartCoroutine(MoveToPos(Camera.main.orthographicSize * Screen.width / Screen.height - .75f, () => SetupMap(startMap)));
+	}
+
 	static public void Win()
 	{
 
@@ -157,20 +157,45 @@ public class CameraMovement : MonoBehaviour
 
 	}
 
-	public IEnumerator MoveToPos(float _x, bool _goingDown)
+	public IEnumerator MoveToPos(float _x, System.Action functionCall, float _y = 1f, float spd = .1f)
 	{
-		Vector2 pos = new Vector2(_x, 1f);
+		Vector2 pos = new Vector2(_x, _y);
 		while (Vector2.SqrMagnitude(pos - (Vector2)transform.position) > .4f)
 		{
-			transform.position = Vector2.LerpUnclamped(transform.position, pos, .1f);
+			transform.position = Vector2.LerpUnclamped(transform.position, pos, spd);
 			yield return null;
 		}
 		transform.position = pos;
-		if (_goingDown)
+		functionCall?.Invoke();
+		yield break;
+	}
+
+	public IEnumerator ZoomOrtho(float zoom, float spd = .1f)
+	{
+		while (Camera.main.orthographicSize < zoom)
+		{
+			Camera.main.orthographicSize += spd;
+			yield return null;
+		}
+		Camera.main.orthographicSize = zoom;
+		yield break;
+	}
+
+	public void SetupPlayer(bool _goinDown)
+	{
+		if (_goinDown)
 		{
 			target.GetComponent<Rigidbody2D>().gravityScale = 1f;
 		}
-		GetComponent<Animator>().SetBool("Up", !_goingDown);
-		yield break;
+		GetComponent<Animator>().SetBool("Up", !_goinDown);
+	}
+
+	public void SetupMap(bool startMAp)
+	{
+		FindObjectOfType<PlayerScript>().ChangeControllerAlpha(0f);
+		upperMenu.SetActive(!startMAp);
+		mapMenu.SetActive(startMAp);
+		StartCoroutine(MoveToPos(30 * Screen.width / Screen.height - .75f,() => SetCameraMode(2), -30 * Screen.height / (Screen.width*2)-2f,.1f));
+		StartCoroutine(ZoomOrtho(30, .2f));
 	}
 }

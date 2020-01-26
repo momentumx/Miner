@@ -12,8 +12,8 @@ public class ParrallexScript : MonoBehaviour {
 		//width = GetComponent<SpriteRenderer>().sprite.bounds.size.x*transform.lossyScale.x*.5f;
 	}
 
-	private void Update()
+	private void LateUpdate()
 	{
-		transform.position = new Vector2(Camera.main.transform.position.x*.93f+17f, 1f);
+		transform.position = new Vector2(Camera.main.transform.position.x*.93f, 1f);
 	}
 }

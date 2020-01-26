@@ -14,7 +14,7 @@ public class PlayerScript : MonoBehaviour
 	[SerializeField]
 	GameObject flame;
 	[SerializeField]
-	float maxSpeed = .4f, backImageRadius = .185f;
+	float maxSpeed = .4f, backImageRadius = .185f, xSpeed = .3f, ySpeed = .1f;
 	public Tile defender;
 	[SerializeField]
 	LayerMask tiles, ground;
@@ -25,6 +25,7 @@ public class PlayerScript : MonoBehaviour
 	public static sbyte drillStrength = 1;
 	static public List<TypeAmount> bag = new List<TypeAmount>();
 	static public ushort[] items = new ushort[MCScript.differentItemCount];
+	public static Transform target;
 
 
 	// Use this for initialization
@@ -48,6 +49,7 @@ public class PlayerScript : MonoBehaviour
 	{
 		if (CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.UnderGround)
 		{
+			// if above ground
 			if (transform.position.y > 1.1f)
 			{
 				rigid.velocity = Vector2.zero;
@@ -56,109 +58,15 @@ public class PlayerScript : MonoBehaviour
 				ChangeStates(STATE.WalkIn);// play the enter animation
 				ChangeControllerAlpha(0f);// the controller only works underground so we need to turn it off here
 				audioS.Stop();// stop the flame noise
-							  // make sure that we are facing to the right
+				// make sure that we are facing to the right
 				Vector3 newScale = transform.localScale;
 				newScale.x = Mathf.Abs(transform.localScale.x);
 				transform.localScale = newScale;
+				// turn off shadow flicker
 				transform.GetChild(1).GetChild(0).gameObject.SetActive(false);
 				return;
 			}
-#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_EDITOR
-			bool horPressed = Input.GetButton("Horizontal");
-			if (horPressed || Input.GetButton("Vertical"))
-			{
-				Vector2 speed;
-				speed.x = Input.GetAxis("Horizontal");
-				speed.y = Input.GetAxis("Vertical");
-				if (horPressed)
-				{
-					Vector3 scale = transform.localScale;
-					scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
-					transform.localScale = scale;
-				}
-				switch (state)
-				{
-					case STATE.Flying:
-					case STATE.Normal:
-
-						digDirection = StrongPush(speed);
-						if (CheckDig(digDirection))
-						{
-							CreatStuff();
-							ChangeStates(STATE.Digging);
-							rigid.velocity = Vector2.zero;
-							rigid.gravityScale = 0f;
-							//defender.gameObject.isStatic = false;
-							return;
-						}
-						if (speed.y > .2f)
-						{
-							rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * .1f + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * .7f + rigid.velocity.y, maxSpeed));
-							ChangeStates(STATE.Flying);
-						}
-						else
-						{
-							speed.y = rigid.velocity.y;
-							anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
-							if (Physics2D.OverlapCircle(transform.position, .1f, ground))
-							{
-								speed.x *= maxSpeed;
-							}
-							else
-							{
-								speed.x = speed.x * .1f + rigid.velocity.x;
-								if (speed.x > maxSpeed)
-								{
-									speed.x = maxSpeed;
-								}
-								else if (speed.x < -maxSpeed)
-								{
-									speed.x = -maxSpeed;
-								}
-							}
-							rigid.velocity = speed;
-							ChangeStates(STATE.Normal);
-						}
-						break;
-					case STATE.Digging:
-						anim.SetFloat(animSpeedHash, speed.y);
-						if (StrongPush(speed) != digDirection)
-						{
-							ChangeStates(STATE.Normal);
-							rigid.gravityScale = 1f;
-						}
-						break;
-					case STATE.Celebrating:
-						if (flame.activeSelf)
-						{
-							rigid.velocity = Vector2.zero;
-						}
-						break;
-					case STATE.Dying:
-						break;
-					case STATE.Breaking:
-						break;
-					default:
-						break;
-				}
-			}
-			else if (Input.GetButtonUp("Horizontal") || Input.GetButtonUp("Vertical"))
-			{
-				if (state == STATE.Digging || state == STATE.Flying)
-				{
-					ChangeStates(STATE.Normal);
-					audioS.Stop();
-				}
-				rigid.gravityScale = 1f;
-				anim.SetFloat(animSpeedHash, 0f);
-			}
-			else
-			{
-				if (Physics2D.OverlapCircle(transform.position, .1f, ground))
-					rigid.velocity = new Vector2(0f, rigid.velocity.y);
-			}
-#endif
-#if false
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
 			if (Input.GetMouseButton(0))
 			{
 				if (Input.GetMouseButtonDown(0))
@@ -194,7 +102,7 @@ public class PlayerScript : MonoBehaviour
 							}
 							if (speed.y > .2f)
 							{
-								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * .1f + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * .7f + rigid.velocity.y, maxSpeed));
+								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * xSpeed + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * ySpeed + rigid.velocity.y, maxSpeed));
 								ChangeStates(STATE.Flying);
 							}
 							else
@@ -264,7 +172,7 @@ public class PlayerScript : MonoBehaviour
 				}
 			}
 #endif
-#if UNITY_ANDROID || UNITY_IPHONE
+#if !UNITY_EDITOR && (z || UNITY_IPHONE)
 
 			if (Input.touchCount != 0)
 			{
@@ -298,7 +206,7 @@ public class PlayerScript : MonoBehaviour
 							}
 							if (speed.y > .18f)
 							{
-								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * .1f + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * .7f + rigid.velocity.y, maxSpeed));
+								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * xSpeed + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * ySpeed + rigid.velocity.y, maxSpeed));
 								ChangeStates(STATE.Flying);
 							}
 							else
@@ -369,6 +277,16 @@ public class PlayerScript : MonoBehaviour
 			}
 #endif
 		}
+	}
+
+	public Vector2 GetVectorForApp()
+	{
+		if (target)
+		{
+			return (target.transform.position - transform.position).normalized * ySpeed;
+		}
+
+		return Vector2.zero;
 	}
 
 	public void ChangeStates(STATE _state)
@@ -673,9 +591,9 @@ public class PlayerScript : MonoBehaviour
 			uint bitShift;
 			int y, offset;
 			int shiftAmount = gridEndPos % 32 - 1;
-			int x = Mathf.Min(32, shiftAmount + 9);
-			int yStartIndex = Mathf.Max(-1, ((int)transform.position.y) / -2 - 4/*we only need to go up a little bc the camera is low*/);
-			int yEndIndex = Mathf.Min(999, yStartIndex + 11/*height*2 + 1*/);
+			int x = Mathf.Min(32, shiftAmount + 12);
+			int yStartIndex = Mathf.Max(-1, ((int)transform.position.y) +10/*we only need to go up a little bc the camera is low*/);
+			int yEndIndex = Mathf.Min(999, yStartIndex + (int)Camera.main.orthographicSize + 10/*height*2 + 1*/);
 			SaveBelowData savedBelow = MCScript.SavedBelowData;
 			Vector2 gridPos;
 

@@ -18,14 +18,20 @@ public class DarknessScript : MonoBehaviour {
 	
 	// Update is called once per frame
 	void FixedUpdate () {
-		if (target.position.y < 0f)
+		if (target.position.y < 30f)
 		{
 		Color alphaR = image.color;
-		alphaR.a = (transform.position.y -18f) / -40f;
+		alphaR.a = Mathf.Clamp((transform.position.y +30f) / -80f,0f,1f);
 		image.color = alphaR;
 		float smoothness = .05f;
 		transform.position = Vector2.Lerp(transform.position, pos,smoothness);
 		transform.localScale = Vector2.Lerp(transform.localScale, scale,smoothness);
+		}
+		else
+		{
+			Color alphaR = image.color;
+			alphaR.a = 0;
+			image.color = alphaR;
 		}
 	}
 

@@ -46,7 +46,9 @@ public class CoppyScript : MonoBehaviour
 	[SerializeField]
 	Transform target;
 	TypeWriter writer;
-	int missionBits; //can be shortened if needed
+	[SerializeField]
+	public UnityEngine.UI.Text depthTxt;
+	static public CoppyScript coppy;
 	public enum TUTORIALSTEPS
 	{
 		Explanation, ShowDownArrow, DownArrow, Controls, Minerals, FillBag, GoUp, CatchMe, MainMenu, ExplainShop, SmeltingBtn, TeachCraft, UnlockCopperBar, CraftCopperBar, Exit, Finish
@@ -72,6 +74,11 @@ public class CoppyScript : MonoBehaviour
 			, Total
 	}
 
+	private void Awake()
+	{
+		coppy = this;
+	}
+
 	void Start()
 	{
 		writer = GetComponent<TypeWriter>();
@@ -87,7 +94,7 @@ public class CoppyScript : MonoBehaviour
 
 		int i = -1; while (++i != (int)UNSKIPPABLETUTORIAL.Total)
 		{
-			CreateUnskippable(1 << i);
+			CreateUnskippable(1u << i);
 		}
 
 	}
@@ -104,7 +111,6 @@ public class CoppyScript : MonoBehaviour
 			{
 				int newDepth = (int)(transform.position.y - 10f);
 				MCScript.savedBothData.trackingAmount[(int)MISSIONTYPE.Depth] = newDepth;// to prevent from calling a bunch of times
-				writer.AddMessage("Wow! new Depth reached: " + Mathf.Abs(newDepth) * 5);
 			}
 		}
 		int i = -1; while (++i != tutCondtions.Count)
@@ -123,24 +129,13 @@ public class CoppyScript : MonoBehaviour
 				--i;
 			}
 		}
+		depthTxt.text = (-transform.position.y).ToString("F0");
+		depthTxt.transform.parent.position = transform.GetChild(0).GetChild(1).position;
 	}
 
 	static public uint GetVision()
 	{
 		return MCScript.savedBothData.upgrades & 0x03u;
-	}
-
-	public void IncreaseMission()
-	{
-		MCScript.savedBothData.missions[0] = MCScript.savedBothData.missions[0] << 1;
-	}
-
-	public void CreateMission()
-	{
-		if (true)
-		{
-
-		}
 	}
 
 	// thses functions take ints bc unitys buttons are stupid and cant recognize enums
@@ -165,7 +160,7 @@ public class CoppyScript : MonoBehaviour
 					}
 					break;
 				case TUTORIALSTEPS.DownArrow:
-					GameObject.Find("Canvas").transform.GetChild(1).GetChild(6).GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.RemoveListener(() => IncreaseTutorial(TUTORIALSTEPS.DownArrow));
+					GameObject.Find("Canvas").transform.Find("Panel").Find("upperMenu").Find("goDownBtn").GetComponent<UnityEngine.UI.Button>().onClick.RemoveListener(() => IncreaseTutorial(TUTORIALSTEPS.DownArrow));
 					target = GameObject.Find("Player").transform.Find("CoppyShoulder");
 					writer.AddMessage("Just swipe in the direction you want to move.");
 					tutCondtions.Add(new Condition(target.parent.parent.GetComponent<PlayerScript>(), -1, (x, y) => ((PlayerScript)x).digDirection != (int)y
@@ -217,7 +212,7 @@ public class CoppyScript : MonoBehaviour
 					writer.AddMessage("When you come up I'll put your resources in the bank!", IncreaseTutorial, TUTORIALSTEPS.ExplainShop);
 					MCScript.menu.Find("MainMenu").GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => IncreaseTutorial(TUTORIALSTEPS.Finish));
 					MCScript.SavedAboveData.collectibles[(int)MCScript.COLLECTIBLES.Copper] += 5;
-					MCScript.menu.Find("MainMenu").Find("SmeltingBtn").GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => IncreaseTutorial(TUTORIALSTEPS.TeachCraft));
+					MCScript.menu.Find("MainMenu").Find("Main").Find("SmeltingBtn").GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => IncreaseTutorial(TUTORIALSTEPS.TeachCraft));
 					break;
 				case TUTORIALSTEPS.ExplainShop:
 					target = MCScript.menu;
@@ -226,16 +221,16 @@ public class CoppyScript : MonoBehaviour
 					writer.AddMessage("Try it out! Press the smelt button!", IncreaseTutorial, TUTORIALSTEPS.SmeltingBtn);
 					break;
 				case TUTORIALSTEPS.SmeltingBtn:
-					target = MCScript.menu.Find("MainMenu").Find("SmeltingBtn");
+					target = MCScript.menu.Find("MainMenu").Find("Main").Find("SmeltingBtn");
 					writer.AddMessage("This one!");
 					break;
 				case TUTORIALSTEPS.TeachCraft:
 					writer.AddMessage("You first have to unlock it with money, and then you can create it!");
 					writer.AddMessage("Unlock the CopperBar, and create it!");
 					target = MCScript.menu.Find("MainMenu").Find("Scroll View");
-					MCScript.menu.Find("MainMenu").Find("SmeltingBtn").GetComponent<UnityEngine.UI.Button>().onClick.RemoveListener(() => IncreaseTutorial(TUTORIALSTEPS.TeachCraft));
+					MCScript.menu.Find("MainMenu").Find("Main").Find("SmeltingBtn").GetComponent<UnityEngine.UI.Button>().onClick.RemoveListener(() => IncreaseTutorial(TUTORIALSTEPS.TeachCraft));
 					// this gets passed by ref!!!!!!! so it will change with it
-					MCScript.menu.Find("Smelting").GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => IncreaseTutorial((uint)MCScript.savedBothData.tutorial));
+					MCScript.menu.Find("Smelting").GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => IncreaseTutorial((TUTORIALSTEPS)MCScript.savedBothData.tutorial));
 					MCScript.menu.Find("Smelting").GetChild(0).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => IncreaseTutorial(TUTORIALSTEPS.Exit));
 					break;
 				case TUTORIALSTEPS.CraftCopperBar:
@@ -263,11 +258,11 @@ public class CoppyScript : MonoBehaviour
 
 	public void CreateUnskippable(System.Object _toComplete)// most likely only ever going to be 1 or 0
 	{
-		if ((MCScript.savedBothData.unskippableTutorial & (int)_toComplete) == 0)
+		if ((MCScript.savedBothData.unskippableTutorial & (uint)_toComplete) == 0)
 		{
-			Condition newCondition = new Condition(CompletedUnskippable, (UNSKIPPABLETUTORIAL)_toComplete);
+			Condition newCondition = new Condition(CompletedUnskippable, (UNSKIPPABLETUTORIAL)(uint)_toComplete);
 			// not completed, need to create
-			switch ((UNSKIPPABLETUTORIAL)_toComplete)
+			switch ((UNSKIPPABLETUTORIAL)(uint)_toComplete)
 			{
 				case UNSKIPPABLETUTORIAL.Oil:
 					newCondition.first = FindObjectOfType<PlayerScript>();
@@ -300,13 +295,13 @@ public class CoppyScript : MonoBehaviour
 			{
 				case UNSKIPPABLETUTORIAL.Oil:
 					writer.AddMessage("This oil is going to make a mess!");
-					writer.AddMessage("Build on oil rig to dig it up.");
+					writer.AddMessage("Build an oil rig to dig it up.");
 					break;
 				case UNSKIPPABLETUTORIAL.Stone:
 					writer.AddMessage("Stones are un-mine-able. You need a building to get rid of it.");
 					break;
 				case UNSKIPPABLETUTORIAL.Beam:
-					writer.AddMessage("Don't let the stone squash you! Place a Beam by tapping!", Freeze);
+					writer.AddMessage("Don't let the stone squash you! Place a Beam by tapping!", (x) => Time.timeScale = 0f);
 					// create press detector and unfreeze when pressed
 					break;
 				default:
@@ -315,20 +310,36 @@ public class CoppyScript : MonoBehaviour
 		}
 	}
 
-	public void Freeze(System.Object _null)
-	{
-		Time.timeScale = 0f;
-
-	}
-
-	public void UnFreeze()
-	{
-		Time.timeScale = 1f;
-	}
-
 	public void CreateMineralMission(System.Object _completed)// most likely only ever going to be 1 or 0
 	{
+		MCScript.Gained += CompletedMineralMission;
+		// create new mission indication next to coppy
+		// make it so that when they click on coppy, this gives details
 
+	}
+
+	bool MissionCheck(int _index, int _amount, MISSIONTYPE _type)
+	{
+		int missionType = (int)_type;
+		if (_index == MCScript.savedBothData.missions[missionType])
+		{
+			MCScript.savedBothData.trackingAmount[missionType] += _amount;
+			if (MCScript.savedBothData.trackingAmount[missionType] > 500)// amount for all minerals to gather (remember they could potentionally get 15)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void CompletedMineralMission(int _index, int _amount)
+	{
+
+		if (MissionCheck(_index, _amount, MISSIONTYPE.Minerals))
+		{
+			// create completed mission indication on coppy
+			// when misison open, they can collect their reward when they click on the completed mission
+		}
 	}
 
 	public void CreateArtifactMission(System.Object _completed)// most likely only ever going to be 1 or 0
