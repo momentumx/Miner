@@ -204,7 +204,6 @@ public class TypeWriter : MonoBehaviour
 	{
 		SmartText smartTxt = thingsToSay[0];
 		txt.fontSize = (int)MCScript.Map(1f / smartTxt.text.Length, .001f, 1f, minSize, maxSize);
-		yield return new WaitForSeconds(.35f);// the length of the typewriter start noise
 		foreach (char letter in smartTxt.text)
 		{
 			txt.text += letter;

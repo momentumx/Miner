@@ -18,10 +18,14 @@ public class CraftingScript : MonoBehaviour
 	// Update is called once per frame
 	void FixedUpdate()
 	{
+		if(amounts == null || amounts.Length == 0)
+		{
+			gameObject.SetActive(false);
+			return;
+		}
 		if (currTime >= time)
 		{
 			GainResource(1);
-			currTime = 0f;
 			MCScript.mcScript.UpdateCraftPrices(Positioner().parent);
 		}
 		else
@@ -55,6 +59,7 @@ public class CraftingScript : MonoBehaviour
 			}
 			MCScript.IncreaseResource(index);
 		}
+		currTime = 0f;
 		return true;
 		//play noise
 		//MCScript.SetText(((MCScript.COLLECTIBLES)index).ToString() + " +" + _numberOfTimes, Color.green, Camera.main.ViewportToScreenPoint(new Vector3(.5f, .7f)));
@@ -99,7 +104,7 @@ public class CraftingScript : MonoBehaviour
 			int resourcesGained = (int)currTime / (int)time;
 			if (GainResource(resourcesGained))
 			{
-				currTime -= resourcesGained * time;
+				currTime = (int)currTime%(int)time;
 			}
 			else
 			{

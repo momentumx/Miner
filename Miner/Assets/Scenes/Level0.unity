@@ -916,6 +916,11 @@ PrefabInstance:
       propertyPath: buy
       value: 1200
       objectReference: {fileID: 0}
+    - target: {fileID: 114775474188760538, guid: 15dad9e871ff85f46b5b4b517c070303,
+        type: 3}
+      propertyPath: indices.Array.data[0]
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 224790410665603114, guid: 15dad9e871ff85f46b5b4b517c070303,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -44433,6 +44438,11 @@ PrefabInstance:
       propertyPath: buy
       value: 2000
       objectReference: {fileID: 0}
+    - target: {fileID: 114775474188760538, guid: 15dad9e871ff85f46b5b4b517c070303,
+        type: 3}
+      propertyPath: indices.Array.data[0]
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 224790410665603114, guid: 15dad9e871ff85f46b5b4b517c070303,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -45559,6 +45569,7 @@ MonoBehaviour:
   smelt: {fileID: 584600405}
   craft: {fileID: 183254294}
   markerPrefab: {fileID: 0}
+  upperMenu: {fileID: 420695869}
 --- !u!4 &2073668795
 Transform:
   m_ObjectHideFlags: 0
@@ -46216,6 +46227,7 @@ GameObject:
   - component: {fileID: 2115601988}
   - component: {fileID: 2115601987}
   - component: {fileID: 2115601991}
+  - component: {fileID: 2115601992}
   m_Layer: 10
   m_Name: Coppy
   m_TagString: Untagged
@@ -46258,8 +46270,8 @@ MonoBehaviour:
   target: {fileID: 422883064}
   skipText: {fileID: 1528013456}
   txt: {fileID: 0}
-  typingSpeed: 0.02
-  fadeSpeed: 0.007
+  typingSpeed: 0.001
+  fadeSpeed: 0.014
   minSize: 25
   maxSize: 80
   chatBoxOffset: {x: 0, y: 0}
@@ -46388,6 +46400,22 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
+--- !u!58 &2115601992
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2115601986}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0.07}
+  serializedVersion: 2
+  m_Radius: 0.65389323
 --- !u!1 &2116365486
 GameObject:
   m_ObjectHideFlags: 0

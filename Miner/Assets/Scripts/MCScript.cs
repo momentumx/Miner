@@ -80,7 +80,7 @@ public class MCScript : MonoBehaviour
 	static SaveAboveData savedAboveData;
 	static public MCScript mcScript;
 	public CraftingScript smelt, craft;
-	public GameObject markerPrefab;
+	public GameObject markerPrefab, upperMenu;
 
 	void Awake()
 	{
@@ -474,7 +474,7 @@ public class MCScript : MonoBehaviour
 		int value = (int)sellMenu.Find("Slider").GetComponent<Slider>().value * (_selling ? -1 : 1);
 		savedAboveData.collectibles[indexOfSell] += value;
 		SetSliderMax();
-		ChangeGold(-value * savedAboveData.dailyMineralValues[indexOfSell], goldTxt.transform.position);
+		ChangeGold(-value * savedAboveData.dailyMineralValues[indexOfSell], Camera.main.WorldToScreenPoint( sellMenu.position));
 		// don't save here to allow for mistakes (they can restart and take it back)
 		// on second thought, the price for sale and buy is the same...
 		//SaveData(savedAboveData);
@@ -919,6 +919,10 @@ public class MCScript : MonoBehaviour
 					break;
 				case MENUTYPE.Shop:
 					offset = (int)COLLECTIBLES.Beam;
+					if (_index < offset || _index > (int)COLLECTIBLES.Teleporter)
+					{
+						return;
+					}
 					break;
 				default:
 					offset = 0;
@@ -948,13 +952,14 @@ public class MCScript : MonoBehaviour
 				{
 					Transform costImage = buyButton.transform.GetChild(i);
 					Text costImageTxt = costImage.GetChild(0).GetComponent<Text>();
-					int cost = int.Parse(System.Text.RegularExpressions.Regex.Match(costImageTxt.text, "\\d+").Value);
+					string[] costSplit = costImageTxt.text.Split('/');
+					int cost = int.Parse(System.Text.RegularExpressions.Regex.Match(costSplit.Length>1?costSplit[1]:costSplit[0], "\\d+").Value);
 					//																							the index of the costimage
 					int available = savedAboveData.collectibles[int.Parse(System.Text.RegularExpressions.Regex.Match(costImage.GetComponent<Image>().sprite.name, "\\d+").Value)];// might be able to remove the -1
 					if (cost > available)
 					{
 						canClick = false;
-						costImageTxt.color = Color.red;
+						costImageTxt.color = new Color(.54f, .1f, 0f);
 					}
 					else
 					{
@@ -1064,6 +1069,10 @@ public class MCScript : MonoBehaviour
 			yield return new WaitForSeconds(.4f);
 		}
 		SaveAll(savedBothData, SavedBelowData, SavedAboveData);
+		foreach (Transform child in upperMenu.GetComponentsInChildren<Transform>(true))
+		{
+			child.gameObject.SetActive(true);
+		}
 		savedBelowData = null;
 		yield break;
 	}

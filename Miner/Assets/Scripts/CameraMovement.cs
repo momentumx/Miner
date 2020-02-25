@@ -108,7 +108,8 @@ public class CameraMovement : MonoBehaviour
 		{
 			CoppyScript.coppy.depthTxt.transform.parent.gameObject.SetActive(false);
 			target.ChangeStates(PlayerScript.STATE.WalkIn);
-			upperMenu.SetActive(true);
+			//upperMenu.SetActive(true);
+			
 		}
 		GoView(Camera.main.orthographicSize * Screen.width / Screen.height - .75f, goingDown);
 	}
