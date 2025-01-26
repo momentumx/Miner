@@ -187,7 +187,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1970702764414978}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 6.6, y: 6.81, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4546169813860554}
@@ -218,8 +218,8 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1.9, y: 2}
-  m_EdgeRadius: 0
+  m_Size: {x: 1.5, y: 1.5}
+  m_EdgeRadius: 0.2
 --- !u!114 &114947702940163764
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -235,4 +235,3 @@ MonoBehaviour:
   value: 0
   state: 0
   hp: 0
-  jewelColor: {r: 0, g: 0, b: 0, a: 0}

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,18 +15,20 @@ public class PlayerScript : MonoBehaviour
 	[SerializeField]
 	GameObject flame;
 	[SerializeField]
-	float maxSpeed = .4f, backImageRadius = .185f, xSpeed = .3f, ySpeed = .1f;
+	float maxSpeed = .4f,  xSpeed = .3f, ySpeed = .1f, sqdDragDist=2000;
 	public Tile defender;
 	[SerializeField]
 	LayerMask tiles, ground;
 	int animSpeedHash, animStateHash;
 	[SerializeField]
-	ParticleSystem dirtParticle, dropItem;
+	ParticleSystem dirtParticle, dropItem, dieParticle;
 	AudioSource audioS;
-	public static sbyte drillStrength = 1;
 	static public List<TypeAmount> bag = new List<TypeAmount>();
 	static public ushort[] items = new ushort[MCScript.differentItemCount];
 	public static Transform target;
+	public static sbyte drillStrength = 1;
+	public bool showJoyStick;
+	public static bool dragBegan, alive = true;
 
 
 	// Use this for initialization
@@ -47,236 +50,205 @@ public class PlayerScript : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		if (CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.UnderGround)
+		if (CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.UnderGround && alive)
 		{
-			// if above ground
 			if (transform.position.y > 1.1f)
-			{
-				rigid.velocity = Vector2.zero;
-				rigid.gravityScale = 0f;
-				CameraMovement.cam.GoVisit();
-				ChangeStates(STATE.WalkIn);// play the enter animation
-				ChangeControllerAlpha(0f);// the controller only works underground so we need to turn it off here
-				audioS.Stop();// stop the flame noise
-				// make sure that we are facing to the right
-				Vector3 newScale = transform.localScale;
-				newScale.x = Mathf.Abs(transform.localScale.x);
-				transform.localScale = newScale;
-				// turn off shadow flicker
-				transform.GetChild(1).GetChild(0).gameObject.SetActive(false);
+			{// return
+				GoUp();
 				return;
 			}
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
-			if (Input.GetMouseButton(0))
+			Vector2 rayPos = transform.position;
+			rayPos.y += 1f;
+			RaycastHit2D hit = Physics2D.Raycast(rayPos, Vector2.zero, 500f, LayerMask.GetMask("Stone"));
+			if (hit)
 			{
-				if (Input.GetMouseButtonDown(0))
+				Debug.Log(hit.transform.name);
+				rayPos.y -= 1f;
+				if (Physics2D.Raycast(rayPos, Vector2.zero))
 				{
-					ChangeControllerAlpha(.5f);
-					contrB.transform.position = Input.mousePosition;
-					contrJ.transform.position = Input.mousePosition;
+					Die();
+				}
+			}
+			if (Input.GetMouseButtonDown(0))
+			{
+				BeginClick();
+			}
+			if (target)
+			{
+				Vector2 autoDir = (Vector2)target.position - (Vector2)transform.position;
+				autoDir.x *= 600f;
+				autoDir.y *= 200;
+				Moving(Vector2.ClampMagnitude(autoDir, 100f));
+			}
+			else
+			{
+				if (Input.GetMouseButton(0))
+				{
+					Vector2 speed = Vector2.ClampMagnitude((Vector2)Input.mousePosition - (Vector2)contrB.transform.position, 100f);
+
+					if (dragBegan)
+					{
+						Moving(speed);
+					}
+					else
+					{
+						Clicking(speed);
+					}
+				}
+				else if (Input.GetMouseButtonUp(0))
+				{
+					EndClick();
 				}
 				else
 				{
-					// in screen space, 100 isnt even the size of the thumb. so the clamp must be at LEAST 100 so that the distance can be seen
-					// if we just clamp to 1, then the image jumps instantly, bc thats the equivalent of 1 pixel
-					Vector2 speed = Vector2.ClampMagnitude((Vector2)Input.mousePosition - (Vector2)contrB.transform.position, 100f);
-					speed *= .01f;// this brings the x & y back to a number between 0-1;
-					contrJ.transform.localPosition = speed * backImageRadius; // this allows us to scale the distance the joystick can travel without effecting the speed of everything else, remove th float when we have the actual image size
-					Vector3 scale = transform.localScale;
-					scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
-					transform.localScale = scale;
-					switch (state)
+					if (Physics2D.OverlapCircle(transform.position, .1f, ground))
+						rigid.velocity = new Vector2(0f, rigid.velocity.y);
+					if (contrB.color.a != 0)
 					{
-						case STATE.Flying:
-						case STATE.Normal:
-
-							digDirection = StrongPush(speed);
-							if (CheckDig(digDirection))
-							{
-								CreatStuff();
-								ChangeStates(STATE.Digging);
-								rigid.velocity = Vector2.zero;
-								rigid.gravityScale = 0f;
-								//defender.gameObject.isStatic = false;
-								return;
-							}
-							if (speed.y > .2f)
-							{
-								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * xSpeed + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * ySpeed + rigid.velocity.y, maxSpeed));
-								ChangeStates(STATE.Flying);
-							}
-							else
-							{
-								speed.y = rigid.velocity.y;
-								anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
-								if (Physics2D.OverlapCircle(transform.position, .1f, ground))
-								{
-									speed.x *= maxSpeed;
-								}
-								else
-								{
-									speed.x = speed.x * .1f + rigid.velocity.x;
-									if (speed.x > maxSpeed)
-									{
-										speed.x = maxSpeed;
-									}
-									else if (speed.x < -maxSpeed)
-									{
-										speed.x = -maxSpeed;
-									}
-								}
-								rigid.velocity = speed;
-								ChangeStates(STATE.Normal);
-							}
-							break;
-						case STATE.Digging:
-							anim.SetFloat(animSpeedHash, speed.y);
-							if (StrongPush(speed) != digDirection)
-							{
-								ChangeStates(STATE.Normal);
-								rigid.gravityScale = 1f;
-							}
-							break;
-						case STATE.Celebrating:
-							if (flame.activeSelf)
-							{
-								rigid.velocity = Vector2.zero;
-							}
-							break;
-						case STATE.Dying:
-							break;
-						case STATE.Breaking:
-							break;
-						default:
-							break;
+						ChangeControllerAlpha(contrB.color.a - Time.deltaTime);
 					}
 				}
 			}
-			else if (Input.GetMouseButtonUp(0))
+		}
+	}
+
+	private void Die()
+	{
+		alive = false;
+		CoppyScript.coppy.writer.AddMessage("Ouch! You got squashed!");
+		CoppyScript.coppy.writer.AddMessage("I'll bring you back to base, but try and avoid those falling rocks!",GoUp);
+		transform.GetChild(1).gameObject.SetActive(false);
+		dieParticle.Play();
+	}
+
+	public void GoUp(System.Object obj = null)
+	{
+		rigid.velocity = Vector2.zero;
+		rigid.gravityScale = 0f;
+		CameraMovement.cam.GoVisit();
+		alive = true;
+		transform.GetChild(1).gameObject.SetActive(true);
+		ChangeStates(STATE.WalkIn);// play the enter animation
+		ChangeControllerAlpha(0f);// the controller only works underground so we need to turn it off here
+		audioS.Stop();// stop the flame noise
+					  // make sure that we are facing to the right
+		Vector3 newScale = transform.localScale;
+		newScale.x = Mathf.Abs(transform.localScale.x);
+		transform.localScale = newScale;
+		// turn off shadow flicker
+		transform.GetChild(1).GetChild(0).gameObject.SetActive(false);
+	}
+
+	public void BeginClick()
+	{
+		contrB.transform.position = Input.mousePosition;
+		contrJ.transform.position = Input.mousePosition;
+		dragBegan = false;
+		target = null;
+	}
+
+	public void Clicking(Vector2 speed)
+	{
+		if (speed.sqrMagnitude > sqdDragDist)
+		{
+			if (showJoyStick)
 			{
-				if (state == STATE.Digging || state == STATE.Flying)
+				ChangeControllerAlpha(.5f);
+			}
+			dragBegan = true;
+		}
+	}
+
+	public void Moving(Vector2 speed)
+	{
+		speed *= .01f;// this brings the x & y back to a number between 0-1;
+		contrJ.transform.localPosition = speed * 250f; // this allows us to scale the distance the joystick can travel without effecting the speed of everything else, remove th float when we have the actual image size
+		Vector3 scale = transform.localScale;
+		scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
+		transform.localScale = scale;
+		switch (state)
+		{
+			case STATE.Flying:
+			case STATE.Normal:
+
+				digDirection = StrongPush(speed);
+				if (CheckDig(digDirection))
+				{
+					CreatStuff();
+					ChangeStates(STATE.Digging);
+					rigid.velocity = Vector2.zero;
+					rigid.gravityScale = 0f;
+					//defender.gameObject.isStatic = false;
+					return;
+				}
+				if (speed.y > .1f)
+				{
+					rigid.velocity = new Vector2(
+					Mathf.Max(// X
+						Mathf.Min(speed.x * xSpeed + rigid.velocity.x, maxSpeed + 2f)
+						, -maxSpeed - 2f)
+					, Mathf.Min(// Y
+						speed.y * ySpeed + rigid.velocity.y
+						, maxSpeed+2f)
+					);
+					ChangeStates(STATE.Flying);
+				}
+				else
+				{
+					speed.y = rigid.velocity.y;
+					anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
+					if (Physics2D.OverlapCircle(transform.position, .1f, ground))
+					{
+						speed.x *= maxSpeed;
+					}
+					else
+					{
+						speed.x = speed.x * .1f + rigid.velocity.x;
+						if (speed.x > maxSpeed)
+						{
+							speed.x = maxSpeed;
+						}
+						else if (speed.x < -maxSpeed)
+						{
+							speed.x = -maxSpeed;
+						}
+					}
+					rigid.velocity = speed;
+					ChangeStates(STATE.Normal);
+				}
+				break;
+			case STATE.Digging:
+				anim.SetFloat(animSpeedHash, speed.y);
+				if (StrongPush(speed) != digDirection)
 				{
 					ChangeStates(STATE.Normal);
-					audioS.Stop();
-				}
-				rigid.gravityScale = 1f;
-				anim.SetFloat(animSpeedHash, 0f);
-			}
-			else
-			{
-				if (Physics2D.OverlapCircle(transform.position, .1f, ground))
-					rigid.velocity = new Vector2(0f, rigid.velocity.y);
-				if (contrB.color.a != 0)
-				{
-					ChangeControllerAlpha(contrB.color.a - .6f);
-				}
-			}
-#endif
-#if !UNITY_EDITOR && (z || UNITY_IPHONE)
-
-			if (Input.touchCount != 0)
-			{
-				if (Input.GetTouch(0).phase == TouchPhase.Began)
-				{
-					ChangeControllerAlpha(.5f);
-					contrB.transform.position = Input.mousePosition;
-				}
-				else if (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(0).phase == TouchPhase.Stationary)
-				{
-					Vector2 speed = Vector2.ClampMagnitude((Vector2)Input.mousePosition - (Vector2)contrB.transform.position, 100f);
-					speed *= .01f;// this brings the x & y back to a number between 0-1;
-					contrJ.transform.localPosition = speed * backImageRadius; // this allows us to scale the distance the joystick can travel without effecting the speed of everything else, remove th float when we have the actual image size
-					Vector3 scale = transform.localScale;
-					scale.x = Mathf.Sign(speed.x) * Mathf.Abs(scale.x);
-					transform.localScale = scale;
-					switch (state)
-					{
-						case STATE.Flying:
-						case STATE.Normal:
-
-							digDirection = StrongPush(speed);
-							if (CheckDig(digDirection))
-							{
-								CreatStuff();
-								ChangeStates(STATE.Digging);
-								rigid.velocity = Vector2.zero;
-								rigid.gravityScale = 0f;
-								//defender.gameObject.isStatic = false;
-								return;
-							}
-							if (speed.y > .18f)
-							{
-								rigid.velocity = new Vector2(Mathf.Max(Mathf.Min(speed.x * xSpeed + rigid.velocity.x, maxSpeed), -maxSpeed), Mathf.Min(speed.y * ySpeed + rigid.velocity.y, maxSpeed));
-								ChangeStates(STATE.Flying);
-							}
-							else
-							{
-								speed.y = rigid.velocity.y;
-								anim.SetFloat(animSpeedHash, Mathf.Abs(speed.x));
-								if (Physics2D.OverlapCircle(transform.position, .1f, ground))
-								{
-									speed.x *= maxSpeed;
-								}
-								else
-								{
-									speed.x = speed.x * .1f + rigid.velocity.x;
-									if (speed.x > maxSpeed)
-									{
-										speed.x = maxSpeed;
-									}
-									else if (speed.x < -maxSpeed)
-									{
-										speed.x = -maxSpeed;
-									}
-								}
-								rigid.velocity = speed;
-								ChangeStates(STATE.Normal);
-							}
-							break;
-						case STATE.Digging:
-							anim.SetFloat(animSpeedHash, speed.y);
-							if (StrongPush(speed) != digDirection)
-							{
-								ChangeStates(STATE.Normal);
-								rigid.gravityScale = 1f;
-							}
-							break;
-						case STATE.Celebrating:
-							if (flame.activeSelf)
-							{
-								rigid.velocity = Vector2.zero;
-							}
-							break;
-						case STATE.Dying:
-							break;
-						case STATE.Breaking:
-							break;
-						default:
-							break;
-					}
-				}
-				else
-				{
-					if (state == STATE.Digging || state == STATE.Flying)
-					{
-						ChangeStates(STATE.Normal);
-						audioS.Stop();
-					}
 					rigid.gravityScale = 1f;
-					anim.SetFloat(animSpeedHash, 0f);
 				}
-			}
-			else
-			{
-				if (Physics2D.OverlapCircle(transform.position, .1f, ground))
-					rigid.velocity = new Vector2(0f, rigid.velocity.y);
-				if (contrB.color.a != 0)
+				break;
+			case STATE.Celebrating:
+				if (flame.activeSelf)
 				{
-					ChangeControllerAlpha(contrB.color.a - .6f);
+					rigid.velocity = Vector2.zero;
 				}
-			}
-#endif
+				break;
+			case STATE.Dying:
+				break;
+			case STATE.Breaking:
+				break;
+			default:
+				break;
 		}
+	}
+
+	public void EndClick()
+	{
+		if (state == STATE.Digging || state == STATE.Flying)
+		{
+			ChangeStates(STATE.Normal);
+			audioS.Stop();
+		}
+		rigid.gravityScale = 1f;
+		anim.SetFloat(animSpeedHash, 0f);
 	}
 
 	public Vector2 GetVectorForApp()
@@ -338,10 +310,15 @@ public class PlayerScript : MonoBehaviour
 		// dead
 		if (defender.hp < 1)
 		{
+			if (defender.transform == target)
+			{
+				target = null;
+				anim.SetFloat(animSpeedHash, 0f);
+			}
 			MCScript.TILE_VALUES tileValue = (MCScript.TILE_VALUES)defender.value;
 			if (tileValue > MCScript.TILE_VALUES.Treasure)//if it lays minerals
 			{
-				int randomAmount = Random.Range(8, 16);
+				int randomAmount = UnityEngine.Random.Range(8, 16);
 				UnityEngine.UI.Text mineralText = GameObject.Find("MineralCountTxt").GetComponent<UnityEngine.UI.Text>();
 				int bagCount = int.Parse(System.Text.RegularExpressions.Regex.Match(mineralText.text, "\\d+").Value);
 				if (randomAmount + bagCount >= MCScript.savedBothData.bagSize)
@@ -356,6 +333,9 @@ public class PlayerScript : MonoBehaviour
 				if (randomAmount > 0)
 				{
 					dropItem.transform.position = defender.transform.position;
+					var temp = dropItem.textureSheetAnimation;
+					temp.rowIndex = (tileValue - MCScript.TILE_VALUES.Coal)/10;
+					temp.startFrame = (tileValue - MCScript.TILE_VALUES.Coal)%10;
 					dropItem.Emit(randomAmount);
 					mineralText.text = (bagCount + randomAmount).ToString() + '/' + MCScript.savedBothData.bagSize;
 
@@ -370,8 +350,6 @@ public class PlayerScript : MonoBehaviour
 						bag[match] += (uint)randomAmount;
 
 					}
-					var temp = dropItem.textureSheetAnimation;
-					temp.rowIndex = tileValue - MCScript.TILE_VALUES.Coal;
 				}
 				ChangeStates(STATE.Celebrating);
 			}
@@ -420,7 +398,7 @@ public class PlayerScript : MonoBehaviour
 							upNeighbor.gameObject.isStatic = false;
 							Rigidbody2D newBody = upNeighbor.gameObject.AddComponent<Rigidbody2D>();
 							newBody.freezeRotation = true;
-							newBody.mass = 100f;
+							newBody.mass = 10000f;
 						}
 					}
 					hitInfo = Physics2D.Raycast((Vector2)upNeighbor.transform.position + Vector2.up * 2f, Vector2.zero);
@@ -591,7 +569,7 @@ public class PlayerScript : MonoBehaviour
 			uint bitShift;
 			int y, offset;
 			int shiftAmount = gridEndPos % 32 - 1;
-			int x = Mathf.Min(32, shiftAmount + 12);
+			int x = Mathf.Min(32, shiftAmount + 15);
 			int yStartIndex = Mathf.Max(-1, ((int)transform.position.y) +10/*we only need to go up a little bc the camera is low*/);
 			int yEndIndex = Mathf.Min(999, yStartIndex + (int)Camera.main.orthographicSize + 10/*height*2 + 1*/);
 			SaveBelowData savedBelow = MCScript.SavedBelowData;
@@ -648,11 +626,11 @@ public class PlayerScript : MonoBehaviour
 				yield break;
 
 			float damper = (1f - elapsed / _duration) * _magnitude;
-			offSet.x = Random.Range(-1f, 1f) * damper;
-			offSet.y = Random.Range(-1f, 1f) * damper;
+			offSet.x = UnityEngine.Random.Range(-1f, 1f) * damper;
+			offSet.y = UnityEngine.Random.Range(-1f, 1f) * damper;
 
 			_trans.localPosition = offSet;
-			_trans.localRotation = Quaternion.AngleAxis(Random.Range(-45f, 45f) * damper, _trans.forward);
+			_trans.localRotation = Quaternion.AngleAxis(UnityEngine.Random.Range(-45f, 45f) * damper, _trans.forward);
 
 			elapsed += Time.deltaTime;
 			yield return null;

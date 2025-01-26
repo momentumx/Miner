@@ -45,7 +45,7 @@ public class CoppyScript : MonoBehaviour
 	List<Condition> missionCondtions = new List<Condition>();
 	[SerializeField]
 	Transform target;
-	TypeWriter writer;
+	public TypeWriter writer;
 	[SerializeField]
 	public UnityEngine.UI.Text depthTxt;
 	static public CoppyScript coppy;
@@ -69,7 +69,7 @@ public class CoppyScript : MonoBehaviour
 	// is this a good idea or bad? I really have no idea
 	public enum UNSKIPPABLETUTORIAL
 	{
-		Oil, Stone, Beam, UseBeam
+		Oil, Stone, Bucket, UseBucket
 
 			, Total
 	}
@@ -129,7 +129,7 @@ public class CoppyScript : MonoBehaviour
 				--i;
 			}
 		}
-		depthTxt.text = (-transform.position.y).ToString("F0");
+		depthTxt.text = Mathf.Max(-transform.position.y,0f).ToString("F0");
 		depthTxt.transform.parent.position = transform.GetChild(0).GetChild(1).position;
 	}
 
@@ -300,8 +300,8 @@ public class CoppyScript : MonoBehaviour
 				case UNSKIPPABLETUTORIAL.Stone:
 					writer.AddMessage("Stones are un-mine-able. You need a building to get rid of it.");
 					break;
-				case UNSKIPPABLETUTORIAL.Beam:
-					writer.AddMessage("Don't let the stone squash you! Place a Beam by tapping!", (x) => Time.timeScale = 0f);
+				case UNSKIPPABLETUTORIAL.Bucket:
+					writer.AddMessage("Don't let the stone squash you! Place a Bucket by tapping!", (x) => Time.timeScale = 0f);
 					// create press detector and unfreeze when pressed
 					break;
 				default:

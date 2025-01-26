@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 public class Tile : MonoBehaviour  {
-
-	public static bool drag;
+	
 	public byte value, state;
 	public sbyte hp;
 	SpriteRenderer jewel;
@@ -18,21 +17,10 @@ public class Tile : MonoBehaviour  {
 
 	public void OnMouseUpAsButton()
 	{
-		if (!drag)
+		if (!PlayerScript.dragBegan && CameraMovement.cameraMode == CameraMovement.CAMERA_MODE.UnderGround)
 		{
 			PlayerScript.target = transform;
 		}
-	}
-
-	public void OnMouseEnter()
-	{
-
-		drag = true;
-	}
-
-	public void OnMouseDown()
-	{
-		drag = false;
 	}
 
 	public void OnTriggerEnter2D ( Collider2D _other ) {

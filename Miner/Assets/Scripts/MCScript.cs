@@ -41,14 +41,14 @@ public class MCScript : MonoBehaviour
 			, Mirror, GPS, UltimateWeapon
 
 			// items
-			, Beam, Bridge, Marker, MapPiece, Teleporter
+			, Bucket, Bridge, Marker
 
 			// unfindables
 			, Rubber, Oil, Dirt, Chest, RareChest, Gems, Artifact,
 
 		Total
 	}
-	public enum BUILDINGS { OilRig, Jewelry, Market, RadioTower, Terrarium, Telescope, Teleporter }
+	public enum BUILDINGS { OilRig, Jewelry, Market, RadioTower, Terrarium, Telescope }
 	public enum TILE_STATES { Hidden, Visited, Dug, Placed }
 	public enum TILE_GEMTYPES { Single, Mineral, Rhombus, Dagger, Diamond, Heart, Hexagon, Leaf, Triangle }
 	public enum MENUTYPE { Minerals, Bars, Crafts, Bag, Shop, Items, Crafting }
@@ -232,10 +232,10 @@ public class MCScript : MonoBehaviour
 			case MENUTYPE.Bars:
 			case MENUTYPE.Crafts:
 			case MENUTYPE.Shop:
-				tab = mainMenu.GetChild(2).Find("Tabs");
+				tab = mainMenu.Find("Tabs");
 				// turn on the rest of the menu
-				mainMenu.GetChild(2).gameObject.SetActive(true);// mainmenu
-				mainMenu.GetChild(3).gameObject.SetActive(false);// bag
+				mainMenu.Find("Main").gameObject.SetActive(true);// mainmenu
+				mainMenu.Find("Bag").gameObject.SetActive(false);// bag
 				switch (menuType)
 				{
 					case MENUTYPE.Bars:
@@ -246,7 +246,7 @@ public class MCScript : MonoBehaviour
 					case MENUTYPE.Crafts:
 						ChangeTabColor(tab.GetChild(2));
 						i = (int)COLLECTIBLES.MarsiniumBar;
-						finish = (int)COLLECTIBLES.Beam;
+						finish = (int)COLLECTIBLES.Marker;
 						break;
 					case MENUTYPE.Shop:
 						ChangeTabColor(tab.GetChild(3));
@@ -282,8 +282,8 @@ public class MCScript : MonoBehaviour
 				break;
 			case MENUTYPE.Bag:
 				// turn off the rest of the menu
-				mainMenu.GetChild(2).gameObject.SetActive(false);
-				mainMenu.GetChild(3).gameObject.SetActive(true);
+				mainMenu.Find("Main").gameObject.SetActive(false);
+				mainMenu.Find("Bag").gameObject.SetActive(true);
 				tab = mainMenu.GetChild(3).Find("BagTabs");
 				ChangeTabColor(tab.GetChild(0));
 				// load the bag in order they were received
@@ -298,16 +298,17 @@ public class MCScript : MonoBehaviour
 					newItem.GetChild(2).GetComponent<Text>().text = ((COLLECTIBLES)mineralIndex).ToString();
 					((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
 				}
-				mainMenu.GetChild(3).GetChild(1).gameObject.SetActive(i == 0 ? true : false);// empty text
+				mainMenu.Find("Bag").GetChild(1).gameObject.SetActive(i == 0 ? true : false);// empty text
 
 				break;
 				//										||||
 				// dont really like how im doing this	vvvv
 			case MENUTYPE.Items:
 				// turn off the rest of the menu
-				mainMenu.GetChild(2).gameObject.SetActive(false);
-				mainMenu.GetChild(3).gameObject.SetActive(true);
-				tab = mainMenu.GetChild(3).Find("BagTabs");
+				mainMenu.Find("Main").gameObject.SetActive(false);
+				Transform bagMenu = mainMenu.Find("Bag");
+				bagMenu.gameObject.SetActive(true);
+				tab = bagMenu.Find("BagTabs");
 				ChangeTabColor(tab.GetChild(1));
 
 				bool hasItems = false;
@@ -347,14 +348,14 @@ public class MCScript : MonoBehaviour
 							Transform newItem = Instantiate(mineralDisplay, content).transform;
 							int passedByRef = i;
 							newItem.GetComponent<Button>().onClick.AddListener(() => ItemUsed(passedByRef));
-							newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i + (int)COLLECTIBLES.Beam];
+							newItem.GetChild(0).GetChild(0).GetComponent<Image>().sprite = collectibles[i + (int)COLLECTIBLES.Bucket];
 							newItem.GetChild(1).GetComponent<Text>().text = PlayerScript.items[i].ToString();
-							newItem.GetChild(2).GetComponent<Text>().text = (i + COLLECTIBLES.Beam).ToString();
+							newItem.GetChild(2).GetComponent<Text>().text = (i + COLLECTIBLES.Bucket).ToString();
 							((RectTransform)newItem).anchoredPosition = new Vector3(2.4f + (i % 3) * 194, -8 - 304 * (i / 3));
 						}
 					}
 				}
-				mainMenu.GetChild(3).GetChild(1).gameObject.SetActive(!hasItems);// empty text
+				mainMenu.Find("Bag").GetChild(1).gameObject.SetActive(!hasItems);// empty text
 
 				break;
 			default:
@@ -368,7 +369,7 @@ public class MCScript : MonoBehaviour
 		--PlayerScript.items[_itemIndex];
 		switch (_itemIndex)
 		{
-			case 0:    // beam
+			case 0:    // Bucket
 				break;
 			case 1:     // bridge
 				break;
@@ -376,9 +377,7 @@ public class MCScript : MonoBehaviour
 				Instantiate(markerPrefab, FindObjectOfType<PlayerScript>().transform).AddComponent<Tile>();
 				//FindObjectOfType<PlayerScript>().transform;
 				break;
-			case 3:     // map piece
-				break;
-			case 4:     // teleporter
+			default:
 				break;
 		}
 	}
@@ -387,7 +386,7 @@ public class MCScript : MonoBehaviour
 	{
 		int i = -1; while (++i != differentItemCount)
 		{
-			SavedAboveData.collectibles[i + (int)COLLECTIBLES.Beam] = PlayerScript.items[i];
+			SavedAboveData.collectibles[i + (int)COLLECTIBLES.Bucket] = PlayerScript.items[i];
 		}
 		// this sets the main menu
 		// this also saves the data after it loops through the bag
@@ -407,7 +406,7 @@ public class MCScript : MonoBehaviour
 		// make sure the player has the items it might of boughten
 		int i = -1; while (++i != differentItemCount)
 		{
-			PlayerScript.items[i] = (ushort)SavedAboveData.collectibles[i + (int)COLLECTIBLES.Beam];
+			PlayerScript.items[i] = (ushort)SavedAboveData.collectibles[i + (int)COLLECTIBLES.Bucket];
 		}
 	}
 
@@ -918,8 +917,8 @@ public class MCScript : MonoBehaviour
 					}
 					break;
 				case MENUTYPE.Shop:
-					offset = (int)COLLECTIBLES.Beam;
-					if (_index < offset || _index > (int)COLLECTIBLES.Teleporter)
+					offset = (int)COLLECTIBLES.Bucket;
+					if (_index < offset || _index > (int)COLLECTIBLES.Marker)
 					{
 						return;
 					}
@@ -1196,18 +1195,16 @@ public class SaveAboveData
 		currTime = System.DateTime.Now;
 		collectibles = new int[(int)MCScript.COLLECTIBLES.Total]; // items
 																  // initialize to -1 so we know if they have unlocked it or not
-		int i = -1; while (++i != (int)MCScript.COLLECTIBLES.Beam)
+		int i = -1; while (++i != (int)MCScript.COLLECTIBLES.Bucket)
 		{
 			collectibles[i] = -1;
 		}
-		collectibles[(int)MCScript.COLLECTIBLES.Beam] = 5;
+		collectibles[(int)MCScript.COLLECTIBLES.Bucket] = 5;
 		collectibles[(int)MCScript.COLLECTIBLES.Marker] = 5;
 		collectibles[(int)MCScript.COLLECTIBLES.Bridge] = 5;
 		dailyMineralValues = new float[collectibles.Length];
-		dailyMineralValues[(int)MCScript.COLLECTIBLES.Beam] = 2f;
-		dailyMineralValues[(int)MCScript.COLLECTIBLES.MapPiece] = 2f;
+		dailyMineralValues[(int)MCScript.COLLECTIBLES.Bucket] = 2f;
 		dailyMineralValues[(int)MCScript.COLLECTIBLES.Bridge] = 2f;
-		dailyMineralValues[(int)MCScript.COLLECTIBLES.Teleporter] = 2f;
 		dailyMineralValues[(int)MCScript.COLLECTIBLES.Marker] = 2f;
 		highsAndLows = RandomizeValues();
 	}
@@ -1221,7 +1218,7 @@ public class SaveAboveData
 		do
 		{
 			dailyMineralValues[i] = 200f + Mathf.Pow(i - (int)MCScript.COLLECTIBLES.CopperBar, UnityEngine.Random.Range(1.8f, 3f));
-		} while (++i != (int)MCScript.COLLECTIBLES.Beam);
+		} while (++i != (int)MCScript.COLLECTIBLES.Bucket);
 
 		int highOutlier = UnityEngine.Random.Range(0, (int)MCScript.COLLECTIBLES.CopperBar), lowOutlier;
 		List<int> selectedHighLow = new List<int>(6);
@@ -1246,10 +1243,10 @@ public class SaveAboveData
 		dailyMineralValues[lowOutlier] *= UnityEngine.Random.Range(.3f, .8f);
 
 		// crafts
-		highOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.Graphite, (int)MCScript.COLLECTIBLES.Beam);
+		highOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.Graphite, (int)MCScript.COLLECTIBLES.Bucket);
 		do
 		{
-			lowOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.Graphite, (int)MCScript.COLLECTIBLES.Beam);
+			lowOutlier = UnityEngine.Random.Range((int)MCScript.COLLECTIBLES.Graphite, (int)MCScript.COLLECTIBLES.Bucket);
 		} while (lowOutlier != highOutlier);
 		selectedHighLow.Add(highOutlier); selectedHighLow.Add(lowOutlier);
 		dailyMineralValues[highOutlier] *= UnityEngine.Random.Range(1.2f, 2.3f);

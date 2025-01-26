@@ -37,7 +37,7 @@ public class CameraMovement : MonoBehaviour
 					{
 						speed = (Vector2)Input.mousePosition - lastPos;
 						speed.y = 0f;
-						speed.x *= .1f;
+						speed.x *= -.1f;
 						lastPos = Input.mousePosition;
 					}
 				}
@@ -107,6 +107,7 @@ public class CameraMovement : MonoBehaviour
 		else
 		{
 			CoppyScript.coppy.depthTxt.transform.parent.gameObject.SetActive(false);
+			lowerMenu.SetActive(false);
 			target.ChangeStates(PlayerScript.STATE.WalkIn);
 			//upperMenu.SetActive(true);
 			
